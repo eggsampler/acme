@@ -14,3 +14,6 @@ Go library implementation for ACME v2
 * Rewrite JWK stuff, needs to be nicer to support the inner/outer JWK for key rollover and certificate key for revocation
 * s/error/errors
   * https://github.com/letsencrypt/boulder/issues/3339
+* Properly handle badNonce errors and gracefully retry
+  * An assumption is made that all get requests will contain a nonce reply
+  * This could cause a problem: https://github.com/letsencrypt/boulder/issues/3272
