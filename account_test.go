@@ -132,8 +132,6 @@ func TestAcmeClient_AccountKeyChange(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	Debug = true
-
 	newKey := makeKey(t)
 	accountNewKey, err := client.AccountKeyChange(account, newKey)
 	if err != nil {
