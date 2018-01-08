@@ -47,6 +47,10 @@ func NewClient(directoryUrl string) (AcmeClient, error) {
 // Helper function to have a central point for performing http requests.
 // Mostly just used for debugging.
 func (c AcmeClient) do(req *http.Request) (*http.Response, error) {
+	// https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-6.1
+	// identifier for this client, as well as the default go user agent
+	req.Header.Set("User-Agent", "eggsampler-acme/1.0 Go-http-client/1.1")
+
 	resp, err := c.client.Do(req)
 	if Debug {
 		log.Printf("DEBUG %s URL: %s", req.Method, req.URL)
