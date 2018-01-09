@@ -31,8 +31,7 @@ func (c AcmeClient) FetchCertificate(certificateUrl string) ([]*x509.Certificate
 		certs = append(certs, cert)
 	}
 
-	links := parseLinks(resp.Header["Link"])
-	up := links["up"]
+	up := fetchLink(resp, "up")
 	if up != "" {
 		upCerts, err := c.FetchCertificate(up)
 		if err != nil {

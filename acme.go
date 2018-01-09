@@ -27,7 +27,7 @@ func NewClient(directoryUrl string) (AcmeClient, error) {
 	ns := &nonceStack{}
 
 	client := AcmeClient{
-		client: &http.Client{
+		httpClient: &http.Client{
 			Transport: ns,
 			Timeout:   time.Second * 30,
 		},
@@ -51,7 +51,7 @@ func (c AcmeClient) do(req *http.Request) (*http.Response, error) {
 	// identifier for this client, as well as the default go user agent
 	req.Header.Set("User-Agent", "eggsampler-acme/1.0 Go-http-client/1.1")
 
-	resp, err := c.client.Do(req)
+	resp, err := c.httpClient.Do(req)
 	if Debug {
 		log.Printf("DEBUG %s URL: %s", req.Method, req.URL)
 	}
@@ -210,21 +210,27 @@ func (c AcmeClient) post(requestUrl, keyId string, privateKey interface{}, paylo
 
 var regLink = regexp.MustCompile(`<(.+?)>;\s*rel="(.+?)"`)
 
-// Parses a Link header from a http response into an map for lookup
-func parseLinks(link []string) map[string]string {
-	if len(link) == 0 {
-		return nil
+// Fetches a http Link header from a http response
+func fetchLink(resp *http.Response, wantedLink string) string {
+	if resp == nil {
+		return ""
 	}
-	links := map[string]string{}
-	for _, l := range link {
+	linkHeader := resp.Header["Link"]
+	if len(linkHeader) == 0 {
+		return ""
+	}
+	for _, l := range linkHeader {
 		matches := regLink.FindAllStringSubmatch(l, -1)
 		for _, m := range matches {
-			if len(m) == 3 {
-				links[m[2]] = m[1]
+			if len(m) != 3 {
+				continue
+			}
+			if m[2] == wantedLink {
+				return m[1]
 			}
 		}
 	}
-	return links
+	return ""
 }
 
 func keyAlgorithm(privateKey interface{}) (jose.SignatureAlgorithm, error) {

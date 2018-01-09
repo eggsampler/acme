@@ -223,3 +223,18 @@ func (c AcmeClient) FinalizeOrder(account AcmeAccount, order AcmeOrder, csr *x50
 		}
 	}
 }
+
+// Fetches a list of orders given an account orders url.
+// Takes a url so the "next" http Link header can be used.
+// https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.1.2.1
+func (c AcmeClient) FetchOrdersList(ordersUrl string) (AcmeOrderList, error) {
+	orderListResp := AcmeOrderList{}
+	resp, err := c.get(ordersUrl, &orderListResp, http.StatusOK)
+	if err != nil {
+		return orderListResp, err
+	}
+
+	orderListResp.Next = fetchLink(resp, "next")
+
+	return orderListResp, nil
+}

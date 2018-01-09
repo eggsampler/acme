@@ -237,7 +237,6 @@ func TestAcmeClient_FinalizeOrder(t *testing.T) {
 
 func TestWildcard(t *testing.T) {
 	// this test uses the fake dns resolver in the boulder docker-compose setup
-	// it also requires that the feature WildcardDomains be enabled
 	randomDomain := randString() + ".com"
 	domains := []string{randomDomain, "*." + randomDomain}
 	var identifiers []AcmeIdentifier
@@ -287,5 +286,19 @@ func TestWildcard(t *testing.T) {
 		if err := cert.VerifyHostname(d); err != nil {
 			t.Fatalf("error verifying hostname %s: %v", d, err)
 		}
+	}
+}
+
+func TestAcmeClient_FetchOrders(t *testing.T) {
+	account, _, _ := makeOrderFinal(t, []string{randString() + ".com"})
+	if account.Orders == "" {
+		t.Fatalf("no orders url: %+v", account)
+	}
+	orderList, err := client.FetchOrdersList(account.Orders)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(orderList.Orders) != 1 {
+		t.Fatal("expected 1 order, got: %d", len(orderList.Orders))
 	}
 }

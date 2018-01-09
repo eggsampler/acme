@@ -2,7 +2,7 @@ package acme
 
 import (
 	"math/rand"
-	"reflect"
+	"net/http"
 	"testing"
 	"time"
 )
@@ -47,28 +47,32 @@ func TestNewClient(t *testing.T) {
 
 func TestParseLinks(t *testing.T) {
 	linkTests := []struct {
-		Name  string
-		Link  []string
-		Count int
-		Links map[string]string
+		Name        string
+		LinkHeaders []string
+		WantedLink  string
+		ExpectedUrl string
 	}{
-		{"no links", []string{}, 0, nil},
-		{"joined links", []string{`<https://url/path>; rel="next", <http://url/path?query>; rel="up"`}, 2, map[string]string{
-			"next": "https://url/path",
-			"up":   "http://url/path?query",
-		}},
-		{"separate links", []string{`<https://url/path>; rel="next"`, `<http://url/path?query>; rel="up"`}, 2, map[string]string{
-			"next": "https://url/path",
-			"up":   "http://url/path?query",
-		}},
+		{
+			Name:        "no links",
+			WantedLink:  "fail",
+			ExpectedUrl: "",
+		},
+		{Name: "joined links",
+			LinkHeaders: []string{`<https://url/path>; rel="next", <http://url/path?query>; rel="up"`},
+			WantedLink:  "up",
+			ExpectedUrl: "http://url/path?query",
+		},
+		{
+			Name:        "separate links",
+			LinkHeaders: []string{`<https://url/path>; rel="next"`, `<http://url/path?query>; rel="up"`},
+			WantedLink:  "up",
+			ExpectedUrl: "http://url/path?query",
+		},
 	}
 	for _, currentTest := range linkTests {
-		links := parseLinks(currentTest.Link)
-		if len(links) != currentTest.Count {
-			t.Fatalf("%s: expected %d links, got: %d", currentTest.Name, currentTest.Count, len(links))
-		}
-		if !reflect.DeepEqual(currentTest.Links, links) {
-			t.Fatalf("%s: links not equal, expected: %+v, got: %+v", currentTest.Name, currentTest.Links, links)
+		linkUrl := fetchLink(&http.Response{Header: http.Header{"Link": currentTest.LinkHeaders}}, currentTest.WantedLink)
+		if linkUrl != currentTest.ExpectedUrl {
+			t.Fatalf("%s: links not equal, expected: %s, got: %s", currentTest.Name, currentTest.ExpectedUrl, linkUrl)
 		}
 	}
 }

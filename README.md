@@ -8,6 +8,9 @@ Go library implementation for ACME v2
   * Boulder doesn't return a pem chain OR an up Link header in the fetch certificate endpoint (yet)
   * Implemented non-standard FetchIssuerCertificate func
   * https://github.com/letsencrypt/boulder/issues/3291
+* Fetching orders list doesn't work
+  * "orders" account field not implemented yet in boulder
+  * https://github.com/letsencrypt/boulder/issues/3335
 
 ## TODO
 * s/error/errors/

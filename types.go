@@ -46,9 +46,9 @@ type AcmeDirectory struct {
 }
 
 type AcmeClient struct {
-	client *http.Client
-	nonces *nonceStack
-	dir    AcmeDirectory
+	httpClient *http.Client
+	nonces     *nonceStack
+	dir        AcmeDirectory
 
 	PollTimeout  time.Duration
 	PollInterval time.Duration
@@ -99,4 +99,9 @@ type AcmeChallenge struct {
 	Token            string    `json:"token"`
 	Error            AcmeError `json:"error"`
 	KeyAuthorization string    `json:"keyAuthorization"`
+}
+
+type AcmeOrderList struct {
+	Next   string   `json:"-"`
+	Orders []string `json:"orders"`
 }
