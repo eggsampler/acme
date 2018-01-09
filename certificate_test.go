@@ -4,7 +4,7 @@ import "testing"
 
 func TestAcmeClient_FetchCertificate(t *testing.T) {
 	domains := []string{randString() + ".com"}
-	_, order := makeOrderFinal(t, domains)
+	_, order, _ := makeOrderFinal(t, domains)
 	if order.Certificate == "" {
 		t.Fatalf("no certificate: %+v", order)
 	}
@@ -31,7 +31,7 @@ func TestAcmeClient_FetchIssuerCertificate(t *testing.T) {
 
 func TestAcmeClient_RevokeCertificate(t *testing.T) {
 	domains := []string{randString() + ".com"}
-	account, order := makeOrderFinal(t, domains)
+	account, order, privKey := makeOrderFinal(t, domains)
 	if order.Certificate == "" {
 		t.Fatalf("no certificate: %+v", order)
 	}
@@ -39,7 +39,7 @@ func TestAcmeClient_RevokeCertificate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expeceted no error, got: %v", err)
 	}
-	if err := client.RevokeCertificate(account, certs[0], ReasonUnspecified); err != nil {
+	if err := client.RevokeCertificate(account, certs[0], privKey, ReasonUnspecified); err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
 }

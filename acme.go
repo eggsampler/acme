@@ -120,7 +120,12 @@ func (c AcmeClient) get(url string, out interface{}, expectedStatus ...int) (*ht
 
 // Encapsulates a payload into a JSON Web Signature
 // https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-6.2
-func encapsulateJws(nonceSource jose.NonceSource, requestUrl, keyId string, sig jose.SigningKey, payload interface{}) (*jose.JSONWebSignature, error) {
+func encapsulateJws(nonceSource jose.NonceSource, requestUrl, keyId string, privateKey interface{}, payload interface{}) (*jose.JSONWebSignature, error) {
+	keyAlgo, err := keyAlgorithm(privateKey)
+	if err != nil {
+		return nil, err
+	}
+
 	rawPayload, err := json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("acme: error marshalling payload: %v", err)
@@ -138,6 +143,11 @@ func encapsulateJws(nonceSource jose.NonceSource, requestUrl, keyId string, sig 
 		opts.EmbedJWK = true
 	}
 
+	sig := jose.SigningKey{
+		Key:       privateKey,
+		Algorithm: keyAlgo,
+	}
+
 	signer, err := jose.NewSigner(sig, &opts)
 	if err != nil {
 		return nil, fmt.Errorf("acme: error creating new signer: %v", err)
@@ -152,7 +162,7 @@ func encapsulateJws(nonceSource jose.NonceSource, requestUrl, keyId string, sig 
 }
 
 // Helper function to perform an http post request and read the body.
-func (c AcmeClient) postRaw(requestUrl, keyId string, sig jose.SigningKey, payload io.Reader, expectedStatus ...int) (*http.Response, []byte, error) {
+func (c AcmeClient) postRaw(requestUrl string, payload io.Reader, expectedStatus ...int) (*http.Response, []byte, error) {
 	req, err := http.NewRequest("POST", requestUrl, payload)
 	if err != nil {
 		return nil, nil, fmt.Errorf("acme: error creating request: %v", err)
@@ -178,13 +188,13 @@ func (c AcmeClient) postRaw(requestUrl, keyId string, sig jose.SigningKey, paylo
 }
 
 // Helper function for performing a http post to an acme resource.
-func (c AcmeClient) post(requestUrl, keyId string, sig jose.SigningKey, payload interface{}, out interface{}, expectedStatus ...int) (*http.Response, error) {
-	object, err := encapsulateJws(c.nonces, requestUrl, keyId, sig, payload)
+func (c AcmeClient) post(requestUrl, keyId string, privateKey interface{}, payload interface{}, out interface{}, expectedStatus ...int) (*http.Response, error) {
+	object, err := encapsulateJws(c.nonces, requestUrl, keyId, privateKey, payload)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, body, err := c.postRaw(requestUrl, keyId, sig, strings.NewReader(object.FullSerialize()), expectedStatus...)
+	resp, body, err := c.postRaw(requestUrl, strings.NewReader(object.FullSerialize()), expectedStatus...)
 	if err != nil {
 		return resp, err
 	}
@@ -217,8 +227,8 @@ func parseLinks(link []string) map[string]string {
 	return links
 }
 
-func KeyAlgorithm(key interface{}) (jose.SignatureAlgorithm, error) {
-	switch k := key.(type) {
+func keyAlgorithm(privateKey interface{}) (jose.SignatureAlgorithm, error) {
+	switch k := privateKey.(type) {
 	case *rsa.PrivateKey:
 		return jose.RS256, nil
 	case *ecdsa.PrivateKey:
@@ -230,7 +240,7 @@ func KeyAlgorithm(key interface{}) (jose.SignatureAlgorithm, error) {
 		case "P-521":
 			return jose.ES512, nil
 		default:
-			return "", fmt.Errorf("acme: unsupported ecdsa params: %s", k.Params().Name)
+			return "", fmt.Errorf("acme: unsupported private key ecdsa params: %s", k.Params().Name)
 		}
 	default:
 		return "", fmt.Errorf("acme: unsupported private key type: %v", k)

@@ -18,11 +18,9 @@ import (
 
 // Helper function to make an account "thumbprint" used as part of authorization challenges
 // https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-8.1
-func makeThumbprint(key jose.SigningKey) (string, error) {
-	jwkey := jose.JSONWebKey{
-		Key: key.Key,
-	}
-	bThumbprint, err := jwkey.Thumbprint(crypto.SHA256)
+func makeThumbprint(privateKey interface{}) (string, error) {
+	jwk := jose.JSONWebKey{Key: privateKey}
+	bThumbprint, err := jwk.Thumbprint(crypto.SHA256)
 	if err != nil {
 		return "", fmt.Errorf("acme: error making account key thumbprint: %v", err)
 	}
@@ -31,7 +29,7 @@ func makeThumbprint(key jose.SigningKey) (string, error) {
 
 // Registers a new account with the acme service
 // https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.3
-func (c AcmeClient) NewAccount(key jose.SigningKey, onlyReturnExisting, termsOfServiceAgreed bool, contact ...string) (AcmeAccount, error) {
+func (c AcmeClient) NewAccount(privateKey interface{}, onlyReturnExisting, termsOfServiceAgreed bool, contact ...string) (AcmeAccount, error) {
 	newAccountReq := struct {
 		OnlyReturnExisting   bool     `json:"onlyReturnExisting"`
 		TermsOfServiceAgreed bool     `json:"termsOfServiceAgreed"`
@@ -43,7 +41,7 @@ func (c AcmeClient) NewAccount(key jose.SigningKey, onlyReturnExisting, termsOfS
 	}
 
 	account := AcmeAccount{}
-	resp, err := c.post(c.dir.NewAccount, "", key, newAccountReq, &account, http.StatusOK, http.StatusCreated)
+	resp, err := c.post(c.dir.NewAccount, "", privateKey, newAccountReq, &account, http.StatusOK, http.StatusCreated)
 	if err != nil {
 		return account, err
 	}
@@ -54,17 +52,17 @@ func (c AcmeClient) NewAccount(key jose.SigningKey, onlyReturnExisting, termsOfS
 	}
 	account.Url = url.String()
 
-	account.SigningKey = key
+	account.PrivateKey = privateKey
 
 	if account.Thumbprint == "" {
-		account.Thumbprint, err = makeThumbprint(account.SigningKey)
+		account.Thumbprint, err = makeThumbprint(account.PrivateKey)
 		if err != nil {
 			return account, err
 		}
 	}
 
 	if account.Status == "" {
-		if _, err := c.post(account.Url, account.Url, key, struct{}{}, &account, http.StatusOK); err != nil {
+		if _, err := c.post(account.Url, account.Url, privateKey, struct{}{}, &account, http.StatusOK); err != nil {
 			return account, fmt.Errorf("acme: error fetching existing account information: %v", err)
 		}
 	}
@@ -83,13 +81,13 @@ func (c AcmeClient) UpdateAccount(account AcmeAccount, termsOfServiceAgreed bool
 		Contact:              contact,
 	}
 
-	_, err := c.post(account.Url, account.Url, account.SigningKey, updateAccountReq, &account, http.StatusOK)
+	_, err := c.post(account.Url, account.Url, account.PrivateKey, updateAccountReq, &account, http.StatusOK)
 	if err != nil {
 		return account, err
 	}
 
 	if account.Thumbprint == "" {
-		account.Thumbprint, err = makeThumbprint(account.SigningKey)
+		account.Thumbprint, err = makeThumbprint(account.PrivateKey)
 		if err != nil {
 			return account, err
 		}
@@ -100,9 +98,9 @@ func (c AcmeClient) UpdateAccount(account AcmeAccount, termsOfServiceAgreed bool
 
 // Rolls over an account to a new key.
 // https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.3.6
-func (c AcmeClient) AccountKeyChange(account AcmeAccount, newKey jose.SigningKey) (AcmeAccount, error) {
+func (c AcmeClient) AccountKeyChange(account AcmeAccount, newPrivateKey interface{}) (AcmeAccount, error) {
 	var newJwKeyPub jose.JSONWebKey
-	switch k := newKey.Key.(type) {
+	switch k := newPrivateKey.(type) {
 	case *rsa.PrivateKey:
 		newJwKeyPub = jose.JSONWebKey{Algorithm: "RSA", Key: k.Public()}
 	case *ecdsa.PrivateKey:
@@ -119,7 +117,7 @@ func (c AcmeClient) AccountKeyChange(account AcmeAccount, newKey jose.SigningKey
 		NewKey:  newJwKeyPub,
 	}
 
-	innerJws, err := encapsulateJws(nil, c.dir.KeyChange, "", newKey, keyChangeReq)
+	innerJws, err := encapsulateJws(nil, c.dir.KeyChange, "", newPrivateKey, keyChangeReq)
 	if err != nil {
 		return account, err
 	}
@@ -127,7 +125,7 @@ func (c AcmeClient) AccountKeyChange(account AcmeAccount, newKey jose.SigningKey
 	var b json.RawMessage
 	b = []byte(innerJws.FullSerialize())
 
-	if _, err := c.post(c.dir.KeyChange, account.Url, account.SigningKey, b, nil); err != nil {
+	if _, err := c.post(c.dir.KeyChange, account.Url, account.PrivateKey, b, nil); err != nil {
 		return account, err
 	}
 

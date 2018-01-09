@@ -3,8 +3,6 @@ package acme
 import (
 	"net/http"
 	"time"
-
-	"gopkg.in/square/go-jose.v2"
 )
 
 var Debug = false
@@ -57,9 +55,9 @@ type AcmeClient struct {
 }
 
 type AcmeAccount struct {
-	Url        string          `json:"-"`
-	SigningKey jose.SigningKey `json:"-"`
-	Thumbprint string          `json:"-"`
+	Url        string      `json:"-"`
+	PrivateKey interface{} `json:"-"`
+	Thumbprint string      `json:"-"`
 
 	Status               string   `json:"status"`
 	Contact              []string `json:"contact"`

@@ -7,19 +7,14 @@ import (
 	"testing"
 
 	"reflect"
-
-	"gopkg.in/square/go-jose.v2"
 )
 
-func makeKey(t *testing.T) jose.SigningKey {
+func makePrivateKey(t *testing.T) interface{} {
 	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		t.Fatalf("error creating account private key: %v", err)
 	}
-	return jose.SigningKey{
-		Algorithm: jose.ES256,
-		Key:       privKey,
-	}
+	return privKey
 }
 
 func TestAcmeClient_NewAccount(t *testing.T) {
@@ -47,7 +42,7 @@ func TestAcmeClient_NewAccount(t *testing.T) {
 		},
 	}
 	for _, currentTest := range errorTests {
-		key := makeKey(t)
+		key := makePrivateKey(t)
 		_, err := client.NewAccount(key, currentTest.OnlyReturnExisting, currentTest.TermsOfServiceAgreed, currentTest.Contact...)
 		if err == nil {
 			t.Fatalf("expected error %s, got none", currentTest.Name)
@@ -74,14 +69,14 @@ func TestAcmeClient_NewAccount(t *testing.T) {
 		},
 	}
 	for _, currentTest := range successTests {
-		key := makeKey(t)
+		key := makePrivateKey(t)
 		if _, err := client.NewAccount(key, false, true, currentTest.Contact...); err != nil {
 			t.Fatalf("unexpected error %s: %v", currentTest.Name, err)
 		}
 	}
 
 	// test making a new account
-	key := makeKey(t)
+	key := makePrivateKey(t)
 	newAccount, err := client.NewAccount(key, false, true)
 	if err != nil {
 		t.Fatalf("unexpected error making new account: %v", err)
@@ -108,7 +103,7 @@ func TestAcmeClient_NewAccount(t *testing.T) {
 }
 
 func TestAcmeClient_UpdateAccount(t *testing.T) {
-	key := makeKey(t)
+	key := makePrivateKey(t)
 	account, err := client.NewAccount(key, false, true)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -126,23 +121,23 @@ func TestAcmeClient_UpdateAccount(t *testing.T) {
 }
 
 func TestAcmeClient_AccountKeyChange(t *testing.T) {
-	key := makeKey(t)
+	key := makePrivateKey(t)
 	account, err := client.NewAccount(key, false, true)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	newKey := makeKey(t)
+	newKey := makePrivateKey(t)
 	accountNewKey, err := client.AccountKeyChange(account, newKey)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if accountNewKey.SigningKey == account.SigningKey {
+	if accountNewKey.PrivateKey == account.PrivateKey {
 		t.Fatal("account key didnt change")
 	}
 
-	if accountNewKey.SigningKey != newKey {
+	if accountNewKey.PrivateKey != newKey {
 		t.Fatal("new key isnt set")
 	}
 }

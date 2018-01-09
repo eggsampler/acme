@@ -12,22 +12,23 @@ import (
 // Downloads a certificate from the given url.
 // https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.4.2
 func (c AcmeClient) FetchCertificate(certificateUrl string) ([]*x509.Certificate, error) {
-	resp, b, err := c.getRaw(certificateUrl, http.StatusOK)
+	resp, raw, err := c.getRaw(certificateUrl, http.StatusOK)
 	if err != nil {
 		return nil, err
 	}
 
 	var certs []*x509.Certificate
 	for {
-		p, b := pem.Decode(b)
+		var p *pem.Block
+		p, raw = pem.Decode(raw)
+		if p == nil {
+			break
+		}
 		cert, err := x509.ParseCertificate(p.Bytes)
 		if err != nil {
 			return certs, fmt.Errorf("acme: parsing certificate: %v", err)
 		}
 		certs = append(certs, cert)
-		if len(b) == 0 {
-			break
-		}
 	}
 
 	links := parseLinks(resp.Header["Link"])
@@ -70,7 +71,7 @@ func (c AcmeClient) FetchIssuerCertificate() (*x509.Certificate, error) {
 
 // Revokes a given certificate.
 // https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.6
-func (c AcmeClient) RevokeCertificate(account AcmeAccount, cert *x509.Certificate, reason int) error {
+func (c AcmeClient) RevokeCertificate(account AcmeAccount, cert *x509.Certificate, certPrivKey interface{}, reason int) error {
 	revokeReq := struct {
 		Certificate string `json:"certificate"`
 		Reason      int    `json:"reason"`
@@ -79,7 +80,9 @@ func (c AcmeClient) RevokeCertificate(account AcmeAccount, cert *x509.Certificat
 		Reason:      reason,
 	}
 
-	_, err := c.post(c.dir.RevokeCert, "", account.SigningKey, revokeReq, nil, http.StatusOK)
+	if _, err := c.post(c.dir.RevokeCert, "", certPrivKey, revokeReq, nil, http.StatusOK); err != nil {
+		return err
+	}
 
-	return err
+	return nil
 }

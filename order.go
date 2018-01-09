@@ -23,7 +23,7 @@ func (c AcmeClient) NewOrder(account AcmeAccount, identifiers []AcmeIdentifier) 
 		Identifiers: identifiers,
 	}
 	newOrderResp := AcmeOrder{}
-	resp, err := c.post(c.dir.NewOrder, account.Url, account.SigningKey, newOrderReq, &newOrderResp, http.StatusCreated)
+	resp, err := c.post(c.dir.NewOrder, account.Url, account.PrivateKey, newOrderReq, &newOrderResp, http.StatusCreated)
 	if err != nil {
 		return newOrderResp, err
 	}
@@ -85,7 +85,7 @@ func (c AcmeClient) UpdateChallenge(account AcmeAccount, challenge AcmeChallenge
 		KeyAuthorization: challenge.KeyAuthorization,
 	}
 
-	if _, err := c.post(challenge.Url, account.Url, account.SigningKey, chalReq, &challenge, http.StatusOK); err != nil {
+	if _, err := c.post(challenge.Url, account.Url, account.PrivateKey, chalReq, &challenge, http.StatusOK); err != nil {
 		return challenge, err
 	}
 	if challenge.Error.Type != "" {
@@ -153,7 +153,7 @@ func (c AcmeClient) FinalizeOrder(account AcmeAccount, order AcmeOrder, csr *x50
 	}
 
 	finalizeResp := AcmeOrder{}
-	resp, err := c.post(order.Finalize, account.Url, account.SigningKey, finaliseReq, &finalizeResp, http.StatusOK)
+	resp, err := c.post(order.Finalize, account.Url, account.PrivateKey, finaliseReq, &finalizeResp, http.StatusOK)
 	if err != nil {
 		return finalizeResp, err
 	}

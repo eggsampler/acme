@@ -17,7 +17,7 @@ import (
 )
 
 func TestAcmeClient_NewOrder(t *testing.T) {
-	key := makeKey(t)
+	key := makePrivateKey(t)
 	account, err := client.NewAccount(key, false, true)
 	if err != nil {
 		t.Fatalf("unexpected error making account: %v", err)
@@ -43,7 +43,7 @@ func TestAcmeClient_NewOrder(t *testing.T) {
 }
 
 func makeOrder(t *testing.T, identifiers []AcmeIdentifier) (AcmeAccount, AcmeOrder) {
-	key := makeKey(t)
+	key := makePrivateKey(t)
 	account, err := client.NewAccount(key, false, true)
 	if err != nil {
 		t.Fatalf("unexpected error making account: %v", err)
@@ -125,9 +125,6 @@ func makeChalResp(t *testing.T, identifiers []AcmeIdentifier) (AcmeAccount, Acme
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(chal.KeyAuthorization))
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		defer cancel()
-		defer s.Shutdown(ctx)
 	})
 	s.Handler = mux
 	go func() {
@@ -141,6 +138,9 @@ func makeChalResp(t *testing.T, identifiers []AcmeIdentifier) (AcmeAccount, Acme
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	defer s.Shutdown(ctx)
 
 	return account, order, chalResp
 }
@@ -183,7 +183,7 @@ func TestAcmeClient_UpdateChallenge(t *testing.T) {
 	makeChalResp(t, []AcmeIdentifier{{"dns", randString() + ".com"}})
 }
 
-func newCSR(t *testing.T, domains []string) *x509.CertificateRequest {
+func newCSR(t *testing.T, domains []string) (*x509.CertificateRequest, interface{}) {
 	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		t.Fatalf("error generating privte key: %v", err)
@@ -211,11 +211,11 @@ func newCSR(t *testing.T, domains []string) *x509.CertificateRequest {
 		t.Fatalf("error generating privte key: %v", err)
 	}
 
-	return csr
+	return csr, privKey
 }
 
-func makeOrderFinal(t *testing.T, domains []string) (AcmeAccount, AcmeOrder) {
-	csr := newCSR(t, domains)
+func makeOrderFinal(t *testing.T, domains []string) (AcmeAccount, AcmeOrder, interface{}) {
+	csr, privKey := newCSR(t, domains)
 
 	var identifiers []AcmeIdentifier
 	for _, s := range domains {
@@ -228,7 +228,7 @@ func makeOrderFinal(t *testing.T, domains []string) (AcmeAccount, AcmeOrder) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	return account, finalOrder
+	return account, finalOrder, privKey
 }
 
 func TestAcmeClient_FinalizeOrder(t *testing.T) {
@@ -267,7 +267,7 @@ func TestWildcard(t *testing.T) {
 		}
 	}
 
-	csr := newCSR(t, domains)
+	csr, _ := newCSR(t, domains)
 
 	finalOrder, err := client.FinalizeOrder(account, order, csr)
 	if err != nil {

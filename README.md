@@ -2,17 +2,15 @@
 Go library implementation for ACME v2 
 
 ## Current Issues
-* Some tests fail because the Location header is not present in the finalize order endpoint
-  * Could work around this by copying the Location from the existing one, or just wait for this: https://github.com/letsencrypt/boulder/pull/3336
-* Key Rollover doesn't work yet
+* Key Rollover is implemented, but boulder has an issue where it thinks the new account already exists
   * https://github.com/letsencrypt/boulder/issues/3340
-* Certificate revocation doesn't work yet
-  * Need to use the certificate jwk instead of account
-  * https://github.com/ietf-wg-acme/acme/pull/383
+* Issuer certificates need non-acme specific url in boulder
+  * Boulder doesn't return a pem chain OR an up Link header in the fetch certificate endpoint (yet)
+  * Implemented non-standard FetchIssuerCertificate func
+  * https://github.com/letsencrypt/boulder/issues/3291
 
 ## TODO
-* Rewrite JWK stuff, needs to be nicer to support the inner/outer JWK for key rollover and certificate key for revocation
-* s/error/errors
+* s/error/errors/
   * https://github.com/letsencrypt/boulder/issues/3339
 * Properly handle badNonce errors and gracefully retry
   * An assumption is made that all get requests will contain a nonce reply
