@@ -19,12 +19,12 @@ func TestCheckError(t *testing.T) {
 		},
 		{
 			Name:           "test acme error expecting ok",
-			Url:            client.dir.NewAccount,
+			Url:            testClient.dir.NewAccount,
 			ExpectedStatus: []int{http.StatusOK},
 		},
 		{
 			Name:           "test http error expecting ok",
-			Url:            client.dir.NewAccount + "/asdasdasdasdasd",
+			Url:            testClient.dir.NewAccount + "/asdasdasdasdasd",
 			ExpectedStatus: []int{http.StatusOK},
 		},
 	}

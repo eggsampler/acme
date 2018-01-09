@@ -18,13 +18,13 @@ import (
 
 func TestAcmeClient_NewOrder(t *testing.T) {
 	key := makePrivateKey(t)
-	account, err := client.NewAccount(key, false, true)
+	account, err := testClient.NewAccount(key, false, true)
 	if err != nil {
 		t.Fatalf("unexpected error making account: %v", err)
 	}
 
 	identifiers := []AcmeIdentifier{{"dns", randString() + ".com"}}
-	order, err := client.NewOrder(account, identifiers)
+	order, err := testClient.NewOrder(account, identifiers)
 	if err != nil {
 		t.Fatalf("unexpected error making order: %v", err)
 	}
@@ -33,7 +33,7 @@ func TestAcmeClient_NewOrder(t *testing.T) {
 	}
 
 	badIdentifiers := []AcmeIdentifier{{"bad", randString() + ".com"}}
-	_, err = client.NewOrder(account, badIdentifiers)
+	_, err = testClient.NewOrder(account, badIdentifiers)
 	if err == nil {
 		t.Fatal("expected error, got none")
 	}
@@ -44,12 +44,12 @@ func TestAcmeClient_NewOrder(t *testing.T) {
 
 func makeOrder(t *testing.T, identifiers []AcmeIdentifier) (AcmeAccount, AcmeOrder) {
 	key := makePrivateKey(t)
-	account, err := client.NewAccount(key, false, true)
+	account, err := testClient.NewAccount(key, false, true)
 	if err != nil {
 		t.Fatalf("unexpected error making account: %v", err)
 	}
 
-	order, err := client.NewOrder(account, identifiers)
+	order, err := testClient.NewOrder(account, identifiers)
 	if err != nil {
 		t.Fatalf("unexpected error making order: %v", err)
 	}
@@ -62,13 +62,13 @@ func makeOrder(t *testing.T, identifiers []AcmeIdentifier) (AcmeAccount, AcmeOrd
 }
 
 func TestAcmeClient_FetchOrder(t *testing.T) {
-	if _, err := client.FetchOrder(testDirectoryUrl + "/asdasdasd"); err == nil {
+	if _, err := testClient.FetchOrder(testDirectoryUrl + "/asdasdasd"); err == nil {
 		t.Fatal("expected error, got none")
 	}
 
 	_, order := makeOrder(t, []AcmeIdentifier{{"dns", randString() + ".com"}})
 
-	fetchedOrder, err := client.FetchOrder(order.Url)
+	fetchedOrder, err := testClient.FetchOrder(order.Url)
 	if err != nil {
 		t.Fatalf("unexpected error fetching order: %v", err)
 	}
@@ -83,7 +83,7 @@ func TestAcmeClient_FetchOrder(t *testing.T) {
 func TestAcmeClient_FetchAuthorization(t *testing.T) {
 	account, order := makeOrder(t, []AcmeIdentifier{{"dns", randString() + ".com"}})
 
-	auth, err := client.FetchAuthorization(account, order.Authorizations[0])
+	auth, err := testClient.FetchAuthorization(account, order.Authorizations[0])
 	if err != nil {
 		t.Fatalf("unexpected error fetching authorization: %v", err)
 	}
@@ -105,7 +105,7 @@ func TestAcmeClient_FetchAuthorization(t *testing.T) {
 
 func makeChal(t *testing.T, identifiers []AcmeIdentifier) (AcmeAccount, AcmeOrder, AcmeChallenge) {
 	account, order := makeOrder(t, identifiers)
-	auth, err := client.FetchAuthorization(account, order.Authorizations[0])
+	auth, err := testClient.FetchAuthorization(account, order.Authorizations[0])
 	if err != nil {
 		t.Fatalf("unexpected error fetching authorization: %v", err)
 	}
@@ -134,7 +134,7 @@ func makeChalResp(t *testing.T, identifiers []AcmeIdentifier) (AcmeAccount, Acme
 			}
 		}
 	}()
-	chalResp, err := client.UpdateChallenge(account, chal)
+	chalResp, err := testClient.UpdateChallenge(account, chal)
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
@@ -167,7 +167,7 @@ func TestEncodeDns01KeyAuthorization(t *testing.T) {
 func TestAcmeClient_UpdateChallenge(t *testing.T) {
 	// test challenge error
 	account, _, chal := makeChal(t, []AcmeIdentifier{{"dns", randString() + ".com"}})
-	_, err := client.UpdateChallenge(account, chal)
+	_, err := testClient.UpdateChallenge(account, chal)
 	if err == nil {
 		t.Fatal("expected error, got none")
 	}
@@ -223,7 +223,7 @@ func makeOrderFinal(t *testing.T, domains []string) (AcmeAccount, AcmeOrder, int
 	}
 
 	account, order, _ := makeChalResp(t, identifiers)
-	finalOrder, err := client.FinalizeOrder(account, order, csr)
+	finalOrder, err := testClient.FinalizeOrder(account, order, csr)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -246,7 +246,7 @@ func TestWildcard(t *testing.T) {
 	account, order := makeOrder(t, identifiers)
 
 	for _, authUrl := range order.Authorizations {
-		currentAuth, err := client.FetchAuthorization(account, authUrl)
+		currentAuth, err := testClient.FetchAuthorization(account, authUrl)
 		if err != nil {
 			t.Fatalf("fetching auth: %v", err)
 		}
@@ -261,19 +261,19 @@ func TestWildcard(t *testing.T) {
 			t.Fatalf("error setting txt: %v", err)
 		}
 
-		if _, err := client.UpdateChallenge(account, chal); err != nil {
+		if _, err := testClient.UpdateChallenge(account, chal); err != nil {
 			t.Fatalf("error update challenge: %v", err)
 		}
 	}
 
 	csr, _ := newCSR(t, domains)
 
-	finalOrder, err := client.FinalizeOrder(account, order, csr)
+	finalOrder, err := testClient.FinalizeOrder(account, order, csr)
 	if err != nil {
 		t.Fatalf("error finalizing: %v", err)
 	}
 
-	certs, err := client.FetchCertificates(finalOrder.Certificate)
+	certs, err := testClient.FetchCertificates(finalOrder.Certificate)
 	if err != nil {
 		t.Fatalf("error fetch cert: %v", err)
 	}
@@ -294,7 +294,7 @@ func TestAcmeClient_FetchOrders(t *testing.T) {
 	if account.Orders == "" {
 		t.Fatalf("no orders url: %+v", account)
 	}
-	orderList, err := client.FetchOrdersList(account.Orders)
+	orderList, err := testClient.FetchOrdersList(account.Orders)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

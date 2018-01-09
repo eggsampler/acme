@@ -13,12 +13,14 @@ const (
 	// testDirectoryUrl = "https://acme-staging-v02.api.letsencrypt.org/directory" lets encrypt acme v2
 )
 
-var client AcmeClient
+var testClient AcmeClient
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
 	var err error
-	client, err = NewClient(testDirectoryUrl)
+	Debug = true
+	testClient, err = NewClient(testDirectoryUrl)
+	Debug = false
 	if err != nil {
 		panic("error connecting to acme server: " + err.Error())
 	}
@@ -40,7 +42,7 @@ func TestNewClient(t *testing.T) {
 		t.Fatalf("expected error, got none")
 	}
 
-	if client.dir.NewAccount == "" {
+	if testClient.dir.NewAccount == "" {
 		t.Fatalf("error creating new client: no new account url provided")
 	}
 }

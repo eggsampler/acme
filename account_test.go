@@ -43,7 +43,7 @@ func TestAcmeClient_NewAccount(t *testing.T) {
 	}
 	for _, currentTest := range errorTests {
 		key := makePrivateKey(t)
-		_, err := client.NewAccount(key, currentTest.OnlyReturnExisting, currentTest.TermsOfServiceAgreed, currentTest.Contact...)
+		_, err := testClient.NewAccount(key, currentTest.OnlyReturnExisting, currentTest.TermsOfServiceAgreed, currentTest.Contact...)
 		if err == nil {
 			t.Fatalf("expected error %s, got none", currentTest.Name)
 		}
@@ -70,20 +70,20 @@ func TestAcmeClient_NewAccount(t *testing.T) {
 	}
 	for _, currentTest := range successTests {
 		key := makePrivateKey(t)
-		if _, err := client.NewAccount(key, false, true, currentTest.Contact...); err != nil {
+		if _, err := testClient.NewAccount(key, false, true, currentTest.Contact...); err != nil {
 			t.Fatalf("unexpected error %s: %v", currentTest.Name, err)
 		}
 	}
 
 	// test making a new account
 	key := makePrivateKey(t)
-	newAccount, err := client.NewAccount(key, false, true)
+	newAccount, err := testClient.NewAccount(key, false, true)
 	if err != nil {
 		t.Fatalf("unexpected error making new account: %v", err)
 	}
 
 	// test fetching an existing account
-	existingAccount, err := client.NewAccount(key, true, true)
+	existingAccount, err := testClient.NewAccount(key, true, true)
 	if err != nil {
 		t.Fatalf("unexpected error fetching existing account: %v", err)
 	}
@@ -93,7 +93,7 @@ func TestAcmeClient_NewAccount(t *testing.T) {
 
 	// test updating an account
 	contact := []string{"mailto:test@test.com"}
-	updatedAccount, err := client.UpdateAccount(existingAccount, true, contact...)
+	updatedAccount, err := testClient.UpdateAccount(existingAccount, true, contact...)
 	if err != nil {
 		t.Fatalf("unexpected error updating account: %v", err)
 	}
@@ -104,13 +104,13 @@ func TestAcmeClient_NewAccount(t *testing.T) {
 
 func TestAcmeClient_UpdateAccount(t *testing.T) {
 	key := makePrivateKey(t)
-	account, err := client.NewAccount(key, false, true)
+	account, err := testClient.NewAccount(key, false, true)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	contact := []string{"mailto:test@test.com"}
-	updatedAccount, err := client.UpdateAccount(account, true, contact...)
+	updatedAccount, err := testClient.UpdateAccount(account, true, contact...)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -122,13 +122,13 @@ func TestAcmeClient_UpdateAccount(t *testing.T) {
 
 func TestAcmeClient_AccountKeyChange(t *testing.T) {
 	key := makePrivateKey(t)
-	account, err := client.NewAccount(key, false, true)
+	account, err := testClient.NewAccount(key, false, true)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	newKey := makePrivateKey(t)
-	accountNewKey, err := client.AccountKeyChange(account, newKey)
+	accountNewKey, err := testClient.AccountKeyChange(account, newKey)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

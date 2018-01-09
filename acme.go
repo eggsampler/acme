@@ -18,6 +18,8 @@ import (
 	"crypto/ecdsa"
 	"crypto/rsa"
 
+	"crypto/tls"
+
 	"gopkg.in/square/go-jose.v2"
 )
 
@@ -35,6 +37,14 @@ func NewClient(directoryUrl string) (AcmeClient, error) {
 			Timeout: time.Second * 30,
 		},
 		nonces: ns,
+	}
+
+	if Debug {
+		client.httpClient.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		}
 	}
 
 	if _, err := client.get(directoryUrl, &client.dir, http.StatusOK); err != nil {
