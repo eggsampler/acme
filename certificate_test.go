@@ -8,7 +8,7 @@ func TestAcmeClient_FetchCertificate(t *testing.T) {
 	if order.Certificate == "" {
 		t.Fatalf("no certificate: %+v", order)
 	}
-	certs, err := client.FetchCertificate(order.Certificate)
+	certs, err := client.FetchCertificates(order.Certificate)
 	if err != nil {
 		t.Fatalf("expeceted no error, got: %v", err)
 	}
@@ -35,7 +35,7 @@ func TestAcmeClient_RevokeCertificate(t *testing.T) {
 	if order.Certificate == "" {
 		t.Fatalf("no certificate: %+v", order)
 	}
-	certs, err := client.FetchCertificate(order.Certificate)
+	certs, err := client.FetchCertificates(order.Certificate)
 	if err != nil {
 		t.Fatalf("expeceted no error, got: %v", err)
 	}

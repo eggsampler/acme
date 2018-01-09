@@ -273,7 +273,7 @@ func TestWildcard(t *testing.T) {
 		t.Fatalf("error finalizing: %v", err)
 	}
 
-	certs, err := client.FetchCertificate(finalOrder.Certificate)
+	certs, err := client.FetchCertificates(finalOrder.Certificate)
 	if err != nil {
 		t.Fatalf("error fetch cert: %v", err)
 	}

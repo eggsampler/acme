@@ -11,7 +11,7 @@ import (
 
 // Downloads a certificate from the given url.
 // https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.4.2
-func (c AcmeClient) FetchCertificate(certificateUrl string) ([]*x509.Certificate, error) {
+func (c AcmeClient) FetchCertificates(certificateUrl string) ([]*x509.Certificate, error) {
 	resp, raw, err := c.getRaw(certificateUrl, http.StatusOK)
 	if err != nil {
 		return nil, err
@@ -33,7 +33,7 @@ func (c AcmeClient) FetchCertificate(certificateUrl string) ([]*x509.Certificate
 
 	up := fetchLink(resp, "up")
 	if up != "" {
-		upCerts, err := c.FetchCertificate(up)
+		upCerts, err := c.FetchCertificates(up)
 		if err != nil {
 			return certs, fmt.Errorf("acme: error fetching up cert: %v", err)
 		}
@@ -46,7 +46,7 @@ func (c AcmeClient) FetchCertificate(certificateUrl string) ([]*x509.Certificate
 }
 
 // NOTE: this is a let's encrypt specific thing which should only be used when the issuer certificate
-// isn't returned when using FetchCertificate
+// isn't returned when using FetchCertificates
 func (c AcmeClient) FetchIssuerCertificate() (*x509.Certificate, error) {
 	u, err := url.Parse(c.dir.Directory)
 	if err != nil {
