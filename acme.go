@@ -21,6 +21,10 @@ import (
 	"gopkg.in/square/go-jose.v2"
 )
 
+const (
+	userAgentString = "eggsampler-acme/1.0 Go-http-client/1.1"
+)
+
 // Creates a new directory client given a valid directory url.
 // https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.1.1
 func NewClient(directoryUrl string) (AcmeClient, error) {
@@ -28,8 +32,7 @@ func NewClient(directoryUrl string) (AcmeClient, error) {
 
 	client := AcmeClient{
 		httpClient: &http.Client{
-			Transport: ns,
-			Timeout:   time.Second * 30,
+			Timeout: time.Second * 30,
 		},
 		nonces: ns,
 	}
@@ -45,11 +48,11 @@ func NewClient(directoryUrl string) (AcmeClient, error) {
 }
 
 // Helper function to have a central point for performing http requests.
-// Mostly just used for debugging.
+// Stores any returned nonces in the stack.
 func (c AcmeClient) do(req *http.Request) (*http.Response, error) {
 	// https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-6.1
 	// identifier for this client, as well as the default go user agent
-	req.Header.Set("User-Agent", "eggsampler-acme/1.0 Go-http-client/1.1")
+	req.Header.Set("User-Agent", userAgentString)
 
 	resp, err := c.httpClient.Do(req)
 	if Debug {
@@ -61,6 +64,9 @@ func (c AcmeClient) do(req *http.Request) (*http.Response, error) {
 	if Debug {
 		log.Printf("DEBUG HEADERS: %+v", resp.Header)
 	}
+
+	c.nonces.push(resp.Header.Get("Replay-Nonce"))
+
 	return resp, nil
 }
 

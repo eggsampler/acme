@@ -1,21 +1,28 @@
 package acme
 
 import (
-	"crypto/tls"
 	"errors"
 	"fmt"
 	"net/http"
 	"sync"
-	"time"
 )
 
+// Simple thread-safe stack impl
 type nonceStack struct {
+	lock  sync.Mutex
+	stack []string
+
+	client      http.Client
 	newNonceUrl string
-	lock        sync.Mutex
-	stack       []string
 }
 
+// Pushes a nonce to the stack.
+// Doesn't push empty nonces, or if there's more than 100 nonces on the stack
 func (ns *nonceStack) push(v string) {
+	if v == "" {
+		return
+	}
+
 	ns.lock.Lock()
 	defer ns.lock.Unlock()
 
@@ -26,58 +33,50 @@ func (ns *nonceStack) push(v string) {
 	ns.stack = append(ns.stack, v)
 }
 
-// NonceSource in gopkg.in/square/go-jose.v2/signing.go
-// Used to insert a nonce field into a jws header.
-func (ns *nonceStack) Nonce() (string, error) {
+// Pops a nonce from the stack.
+// Returns empty string if there are no nonces
+func (ns *nonceStack) pop() string {
 	ns.lock.Lock()
 	defer ns.lock.Unlock()
 
 	n := len(ns.stack)
 	if n == 0 {
-		if ns.newNonceUrl == "" {
-			return "", errors.New("acme: no directory url")
-		}
-		c := http.Client{Timeout: 10 * time.Second}
-		resp, err := c.Head(ns.newNonceUrl)
-		if err != nil {
-			return "", fmt.Errorf("acme: error fetching new nonce: %v", err)
-		}
-		nonce := resp.Header.Get("Replay-Nonce")
-		if nonce == "" {
-			return "", errors.New("acme: no nonce sent")
-		}
-		return nonce, nil
+		return ""
 	}
 
 	v := ns.stack[n-1]
 	ns.stack = ns.stack[:n-1]
 
-	return v, nil
+	return v
 }
 
-// RoundTripper in net/http/client.go
-// Used to extract valid nonces from http requests to an acme resource.
-func (ns *nonceStack) RoundTrip(req *http.Request) (resp *http.Response, err error) {
-	var rt http.RoundTripper
-	if Debug {
-		rt = &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		}
-	} else {
-		rt = http.DefaultTransport
+// NonceSource in gopkg.in/square/go-jose.v2/signing.go
+// Used to insert a nonce field into a jws header.
+func (ns *nonceStack) Nonce() (string, error) {
+	nonce := ns.pop()
+	if nonce != "" {
+		return nonce, nil
 	}
 
-	resp, err = rt.RoundTrip(req)
+	if ns.newNonceUrl == "" {
+		return "", errors.New("acme: no newNonce url")
+	}
+
+	req, err := http.NewRequest("HEAD", ns.newNonceUrl, nil)
 	if err != nil {
-		return
+		return "", fmt.Errorf("acme: error creating newNonce request: %v", err)
+	}
+	req.Header.Set("User-Agent", userAgentString)
+
+	resp, err := ns.client.Head(ns.newNonceUrl)
+	if err != nil {
+		return "", fmt.Errorf("acme: error fetching new nonce: %v", err)
 	}
 
-	nonce := resp.Header.Get("Replay-Nonce")
-	if nonce == "" {
-		return
+	replaceNonce := resp.Header.Get("Replay-Nonce")
+	if replaceNonce == "" {
+		return "", errors.New("acme: no nonce sent")
 	}
 
-	ns.push(nonce)
-
-	return
+	return replaceNonce, nil
 }
