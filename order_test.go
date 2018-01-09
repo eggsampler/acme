@@ -292,7 +292,7 @@ func TestWildcard(t *testing.T) {
 func TestAcmeClient_FetchOrders(t *testing.T) {
 	account, _, _ := makeOrderFinal(t, []string{randString() + ".com"})
 	if account.Orders == "" {
-		t.Fatalf("no orders url: %+v", account)
+		t.Fatalf("no account orders url")
 	}
 	orderList, err := testClient.FetchOrdersList(account.Orders)
 	if err != nil {

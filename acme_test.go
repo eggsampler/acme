@@ -1,6 +1,8 @@
 package acme
 
 import (
+	"io/ioutil"
+	"log"
 	"math/rand"
 	"net/http"
 	"testing"
@@ -19,8 +21,8 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 	var err error
 	Debug = true
+	log.SetOutput(ioutil.Discard)
 	testClient, err = NewClient(testDirectoryUrl)
-	Debug = false
 	if err != nil {
 		panic("error connecting to acme server: " + err.Error())
 	}
