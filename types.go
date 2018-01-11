@@ -8,9 +8,9 @@ import (
 var Debug = false
 
 var (
-	AcmeChallengeDns01    = "dns-01"
-	AcmeChallengeHttp01   = "http-01"
-	AcmeChallengeTlsSni02 = "tls-sni-02"
+	AcmeChallengeTypeDns01    = "dns-01"
+	AcmeChallengeTypeHttp01   = "http-01"
+	AcmeChallengeTypeTlsSni02 = "tls-sni-02"
 )
 
 // Constants used for certificate revocation, used for RevokeCertificate
@@ -23,14 +23,13 @@ const (
 	ReasonSuperseded                  // 4
 	ReasonCessationOfOperation        // 5
 	ReasonCertificateHold             // 6
-	_
-	ReasonRemoveFromCRL      // 8
-	ReasonPrivilegeWithdrawn // 9
-	ReasonAaCompromise       // 10
+	_                                 // 7 - Unused
+	ReasonRemoveFromCRL               // 8
+	ReasonPrivilegeWithdrawn          // 9
+	ReasonAaCompromise                // 10
 )
 
 type AcmeDirectory struct {
-	Directory  string `json:"-"`
 	NewNonce   string `json:"newNonce"`
 	NewAccount string `json:"newAccount"`
 	NewOrder   string `json:"newOrder"`
@@ -43,6 +42,8 @@ type AcmeDirectory struct {
 		CaaIdentities           []string `json:"caaIdentities"`
 		ExternalAccountRequired bool     `json:"externalAccountRequired"`
 	} `json:"meta"`
+
+	Directory string `json:"-"`
 }
 
 type AcmeClient struct {
@@ -50,19 +51,19 @@ type AcmeClient struct {
 	nonces     *nonceStack
 	dir        AcmeDirectory
 
-	PollTimeout  time.Duration
-	PollInterval time.Duration
+	PollTimeout  time.Duration // Default 30 seconds
+	PollInterval time.Duration // Default 0.5 seconds
 }
 
 type AcmeAccount struct {
-	Url        string      `json:"-"`
-	PrivateKey interface{} `json:"-"`
-	Thumbprint string      `json:"-"`
-
 	Status               string   `json:"status"`
 	Contact              []string `json:"contact"`
 	TermsOfServiceAgreed bool     `json:"onlyReturnExisting"`
 	Orders               string   `json:"orders"`
+
+	Url        string      `json:"-"` // Provided by the Location http header
+	PrivateKey interface{} `json:"-"`
+	Thumbprint string      `json:"-"` // SHA-256 digest JWK_Thumbprint of the account key
 }
 
 type AcmeIdentifier struct {
@@ -71,8 +72,6 @@ type AcmeIdentifier struct {
 }
 
 type AcmeOrder struct {
-	Url string `json:"-"`
-
 	Status         string           `json:"status"`
 	Expires        time.Time        `json:"expires"`
 	Identifiers    []AcmeIdentifier `json:"identifiers"`
@@ -80,6 +79,8 @@ type AcmeOrder struct {
 	Error          AcmeError        `json:"error"`
 	Finalize       string           `json:"finalize"`
 	Certificate    string           `json:"certificate"`
+
+	Url string `json:"-"` // Provided by the rel="Location" Link http header
 }
 
 type AcmeAuthorization struct {
@@ -88,6 +89,7 @@ type AcmeAuthorization struct {
 	Expires    time.Time       `json:"expires"`
 	Challenges []AcmeChallenge `json:"challenges"`
 
+	// For convenience access to the provided challenges
 	ChallengeMap   map[string]AcmeChallenge `json:"-"`
 	ChallengeTypes []string                 `json:"-"`
 }
@@ -99,9 +101,12 @@ type AcmeChallenge struct {
 	Token            string    `json:"token"`
 	Error            AcmeError `json:"error"`
 	KeyAuthorization string    `json:"keyAuthorization"`
+
+	AuthorizationUrl string `json:"-"` // Provided by the rel="up" Link http header
 }
 
 type AcmeOrderList struct {
-	Next   string   `json:"-"`
 	Orders []string `json:"orders"`
+
+	Next string `json:"-"` // Provided by the rel="next" Link http header
 }

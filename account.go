@@ -46,12 +46,7 @@ func (c AcmeClient) NewAccount(privateKey interface{}, onlyReturnExisting, terms
 		return account, err
 	}
 
-	url, err := resp.Location()
-	if err != nil {
-		return account, fmt.Errorf("acme: error getting account location: %v", err)
-	}
-	account.Url = url.String()
-
+	account.Url = resp.Header.Get("Location")
 	account.PrivateKey = privateKey
 
 	if account.Thumbprint == "" {
@@ -126,6 +121,23 @@ func (c AcmeClient) AccountKeyChange(account AcmeAccount, newPrivateKey interfac
 	b = []byte(innerJws.FullSerialize())
 
 	if _, err := c.post(c.dir.KeyChange, account.Url, account.PrivateKey, b, nil); err != nil {
+		return account, err
+	}
+
+	return account, nil
+}
+
+// Deactivates a given account.
+// https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.3.7
+func (c AcmeClient) DeactivateAccount(account AcmeAccount) (AcmeAccount, error) {
+	deactivateReq := struct {
+		Status string `json:"status"`
+	}{
+		Status: "deactivated",
+	}
+
+	_, err := c.post(account.Url, account.Url, account.PrivateKey, deactivateReq, &account, http.StatusOK)
+	if err != nil {
 		return account, err
 	}
 

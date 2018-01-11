@@ -13,8 +13,10 @@ Go library implementation for ACME v2
   * https://github.com/letsencrypt/boulder/issues/3335
 
 ## TODO
-* s/error/errors/
+* s/error/errors/ and make []AcmeError on AcmeChallenge
   * https://github.com/letsencrypt/boulder/issues/3339
 * Properly handle badNonce errors and gracefully retry
   * An assumption is made that all get requests will contain a nonce reply
   * This could cause a problem: https://github.com/letsencrypt/boulder/issues/3272
+* Write up a better readme
+* Write an example showing the usage

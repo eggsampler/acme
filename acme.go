@@ -57,6 +57,19 @@ func NewClient(directoryUrl string) (AcmeClient, error) {
 	return client, nil
 }
 
+// Helper function to get the poll interval and poll timeout, defaulting if 0
+func (c AcmeClient) getPollingDurations() (time.Duration, time.Duration) {
+	pollInterval := c.PollInterval
+	if pollInterval == 0 {
+		pollInterval = 500 * time.Millisecond
+	}
+	pollTimeout := c.PollTimeout
+	if pollTimeout == 0 {
+		pollTimeout = 30 * time.Second
+	}
+	return pollInterval, pollTimeout
+}
+
 // Helper function to have a central point for performing http requests.
 // Stores any returned nonces in the stack.
 func (c AcmeClient) do(req *http.Request) (*http.Response, error) {

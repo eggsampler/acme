@@ -3,7 +3,6 @@ package acme
 import (
 	"testing"
 
-	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -13,7 +12,6 @@ import (
 	"net/http"
 	"reflect"
 	"strings"
-	"time"
 )
 
 func TestAcmeClient_NewOrder(t *testing.T) {
@@ -80,109 +78,6 @@ func TestAcmeClient_FetchOrder(t *testing.T) {
 	}
 }
 
-func TestAcmeClient_FetchAuthorization(t *testing.T) {
-	account, order := makeOrder(t, []AcmeIdentifier{{"dns", randString() + ".com"}})
-
-	auth, err := testClient.FetchAuthorization(account, order.Authorizations[0])
-	if err != nil {
-		t.Fatalf("unexpected error fetching authorization: %v", err)
-	}
-
-	var chal AcmeChallenge
-	for _, c := range auth.Challenges {
-		if c.Type == AcmeChallengeHttp01 {
-			chal = c
-			break
-		}
-	}
-	if chal.Type == "" {
-		t.Fatalf("no http-01 challenge found: %v", chal)
-	}
-	if chal.Status != "pending" {
-		t.Fatalf("unexpected challenge status: %v", chal.Status)
-	}
-}
-
-func makeChal(t *testing.T, identifiers []AcmeIdentifier) (AcmeAccount, AcmeOrder, AcmeChallenge) {
-	account, order := makeOrder(t, identifiers)
-	auth, err := testClient.FetchAuthorization(account, order.Authorizations[0])
-	if err != nil {
-		t.Fatalf("unexpected error fetching authorization: %v", err)
-	}
-	for _, c := range auth.Challenges {
-		if c.Type == AcmeChallengeHttp01 {
-			return account, order, c
-		}
-	}
-	t.Fatalf("no http-01 challenge: %+v", auth.Challenges)
-	return AcmeAccount{}, AcmeOrder{}, AcmeChallenge{}
-}
-
-func makeChalResp(t *testing.T, identifiers []AcmeIdentifier) (AcmeAccount, AcmeOrder, AcmeChallenge) {
-	// this test assumes the FAKE_DNS in boulder docker-compose is set properly to connect to localhost
-	account, order, chal := makeChal(t, identifiers)
-	s := &http.Server{Addr: ":5002"}
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(chal.KeyAuthorization))
-	})
-	s.Handler = mux
-	go func() {
-		if err := s.ListenAndServe(); err != nil {
-			if err != http.ErrServerClosed {
-				t.Fatalf("error listening: %v", err)
-			}
-		}
-	}()
-	chalResp, err := testClient.UpdateChallenge(account, chal)
-	if err != nil {
-		t.Fatalf("expected no error, got: %v", err)
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-	defer s.Shutdown(ctx)
-
-	return account, order, chalResp
-}
-
-func TestEncodeDns01KeyAuthorization(t *testing.T) {
-	tests := []struct {
-		KeyAuth string
-		Encoded string
-	}{
-		{
-			"YLhavngUj1w8B79rUzxB5imUvO8DPyLDHgce89NuMfw.4fqGG7OQog-EV3ovi0b_amhdzVNWxxswDUN9ypYhWpE",
-			"vKcNRAl8IQoDxFFQbEmXHgZ8O1rYk3JTFooIfYJDEEU",
-		},
-	}
-
-	for _, currentTest := range tests {
-		e := EncodeDns01KeyAuthorization(currentTest.KeyAuth)
-		if e != currentTest.Encoded {
-			t.Fatalf("expected: %s, got: %s", currentTest.Encoded, e)
-		}
-	}
-}
-
-func TestAcmeClient_UpdateChallenge(t *testing.T) {
-	// test challenge error
-	account, _, chal := makeChal(t, []AcmeIdentifier{{"dns", randString() + ".com"}})
-	_, err := testClient.UpdateChallenge(account, chal)
-	if err == nil {
-		t.Fatal("expected error, got none")
-	}
-	acmeErr, ok := err.(AcmeError)
-	if !ok {
-		t.Fatalf("expected AcmeError, got: %s - %v", reflect.TypeOf(err), err)
-	}
-	if acmeErr.Type != "urn:ietf:params:acme:error:connection" {
-		t.Fatalf("expected error urn:ietf:params:acme:error:connection, got: %v", acmeErr.Type)
-	}
-
-	// test challenge success
-	makeChalResp(t, []AcmeIdentifier{{"dns", randString() + ".com"}})
-}
-
 func newCSR(t *testing.T, domains []string) (*x509.CertificateRequest, interface{}) {
 	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
@@ -222,13 +117,22 @@ func makeOrderFinal(t *testing.T, domains []string) (AcmeAccount, AcmeOrder, int
 		identifiers = append(identifiers, AcmeIdentifier{"dns", s})
 	}
 
-	account, order, _ := makeChalResp(t, identifiers)
-	finalOrder, err := testClient.FinalizeOrder(account, order, csr)
+	account, order, chal := makeChal(t, identifiers, AcmeChallengeTypeHttp01)
+	if order.Status != "pending" {
+		t.Fatalf("expected pending order status, got: %s", order.Status)
+	}
+
+	updateChalHttp(t, account, chal)
+
+	order, err := testClient.FinalizeOrder(account, order, csr)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+	if order.Status != "valid" {
+		t.Fatal("order not valid")
+	}
 
-	return account, finalOrder, privKey
+	return account, order, privKey
 }
 
 func TestAcmeClient_FinalizeOrder(t *testing.T) {
@@ -251,7 +155,7 @@ func TestWildcard(t *testing.T) {
 			t.Fatalf("fetching auth: %v", err)
 		}
 
-		chal, ok := currentAuth.ChallengeMap[AcmeChallengeDns01]
+		chal, ok := currentAuth.ChallengeMap[AcmeChallengeTypeDns01]
 		if !ok {
 			t.Fatal("no dns challenge provided")
 		}
@@ -289,7 +193,7 @@ func TestWildcard(t *testing.T) {
 	}
 }
 
-func TestAcmeClient_FetchOrders(t *testing.T) {
+func TestAcmeClient_FetchOrdersList(t *testing.T) {
 	account, _, _ := makeOrderFinal(t, []string{randString() + ".com"})
 	if account.Orders == "" {
 		t.Fatalf("no account orders url")
@@ -299,6 +203,6 @@ func TestAcmeClient_FetchOrders(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(orderList.Orders) != 1 {
-		t.Fatal("expected 1 order, got: %d", len(orderList.Orders))
+		t.Fatalf("expected 1 order, got: %d", len(orderList.Orders))
 	}
 }

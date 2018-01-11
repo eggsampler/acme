@@ -2,7 +2,7 @@ package acme
 
 import "testing"
 
-func TestAcmeClient_FetchCertificate(t *testing.T) {
+func TestAcmeClient_FetchCertificates(t *testing.T) {
 	domains := []string{randString() + ".com"}
 	_, order, _ := makeOrderFinal(t, domains)
 	if order.Certificate == "" {

@@ -141,3 +141,19 @@ func TestAcmeClient_AccountKeyChange(t *testing.T) {
 		t.Fatal("new key isnt set")
 	}
 }
+
+func TestAcmeClient_DeactivateAccount(t *testing.T) {
+	key := makePrivateKey(t)
+	account, err := testClient.NewAccount(key, false, true)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	account, err = testClient.DeactivateAccount(account)
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	if account.Status != "deactivated" {
+		t.Fatalf("expected account deactivated, got: %s", account.Status)
+	}
+}
