@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+// Turns on debug mode. Currently, debug mode is only for disabling TLS checks for the http client.
 var Debug = false
 
 var (

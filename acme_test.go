@@ -1,8 +1,6 @@
 package acme
 
 import (
-	"io/ioutil"
-	"log"
 	"math/rand"
 	"net/http"
 	"testing"
@@ -12,7 +10,7 @@ import (
 const (
 	testDirectoryUrl = "http://localhost:4001/directory" // boulder
 	// testDirectoryUrl = "https://localhost:14000/dir" // pebble
-	// testDirectoryUrl = "https://acme-staging-v02.api.letsencrypt.org/directory" lets encrypt acme v2
+	// testDirectoryUrl = "https://acme-staging-v02.api.letsencrypt.org/directory" // lets encrypt acme v2 staging
 )
 
 var testClient AcmeClient
@@ -21,7 +19,6 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 	var err error
 	Debug = true
-	log.SetOutput(ioutil.Discard)
 	testClient, err = NewClient(testDirectoryUrl)
 	if err != nil {
 		panic("error connecting to acme server: " + err.Error())

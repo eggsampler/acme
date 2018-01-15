@@ -3,6 +3,7 @@ package acme
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 )
 
@@ -42,7 +43,7 @@ func checkError(resp *http.Response, expectedStatuses ...int) error {
 		return fmt.Errorf("acme: expected status codes: %d, got: %d %s", expectedStatuses, resp.StatusCode, resp.Status)
 	}
 
-	body, err := readBody(resp.Body)
+	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("acme: error reading error body: %v", err)
 	}

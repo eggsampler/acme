@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"time"
 
-	"log"
-
 	"io"
 
 	"regexp"
@@ -78,32 +76,13 @@ func (c AcmeClient) do(req *http.Request) (*http.Response, error) {
 	req.Header.Set("User-Agent", userAgentString)
 
 	resp, err := c.httpClient.Do(req)
-	if Debug {
-		log.Printf("DEBUG %s URL: %s", req.Method, req.URL)
-	}
 	if err != nil {
 		return resp, err
-	}
-	if Debug {
-		log.Printf("DEBUG HEADERS: %+v", resp.Header)
 	}
 
 	c.nonces.push(resp.Header.Get("Replay-Nonce"))
 
 	return resp, nil
-}
-
-// Helper function to have a central point for reading http response bodies.
-// Mostly just used for debugging.
-func readBody(r io.Reader) ([]byte, error) {
-	body, err := ioutil.ReadAll(r)
-	if err != nil {
-		return body, err
-	}
-	if Debug {
-		log.Printf("DEBUG BODY: %s", string(body))
-	}
-	return body, nil
 }
 
 // Helper function to perform an http get request and read the body.
@@ -123,7 +102,7 @@ func (c AcmeClient) getRaw(url string, expectedStatus ...int) (*http.Response, [
 		return resp, nil, err
 	}
 
-	body, err := readBody(resp.Body)
+	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return resp, body, fmt.Errorf("acme: error reading response body: %v", err)
 	}
@@ -208,7 +187,7 @@ func (c AcmeClient) postRaw(requestUrl string, payload io.Reader, expectedStatus
 		return resp, nil, err
 	}
 
-	body, err := readBody(resp.Body)
+	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return resp, body, fmt.Errorf("acme: error reading response body: %v", err)
 	}
