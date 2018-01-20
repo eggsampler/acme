@@ -208,14 +208,6 @@ func main() {
 			Bytes: c.Raw,
 		}))))
 	}
-	issuer, err := client.FetchIssuerCertificate()
-	if err != nil {
-		log.Fatalf("Error fetching issuer certificate: %v", err)
-	}
-	pemData = append(pemData, string(pem.EncodeToMemory(&pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: issuer.Raw,
-	})))
 	if err := ioutil.WriteFile(certFile, []byte(strings.Join(pemData, "\n")), 0600); err != nil {
 		log.Fatalf("Error writing certificate file %q: %v", certFile, err)
 	}

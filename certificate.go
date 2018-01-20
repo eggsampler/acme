@@ -6,7 +6,6 @@ import (
 	"encoding/pem"
 	"fmt"
 	"net/http"
-	"net/url"
 )
 
 // Downloads a certificate from the given url.
@@ -43,29 +42,6 @@ func (c AcmeClient) FetchCertificates(certificateUrl string) ([]*x509.Certificat
 	}
 
 	return certs, nil
-}
-
-// NOTE: this is a let's encrypt specific thing which should only be used when the issuer certificate
-// isn't returned when using FetchCertificates
-func (c AcmeClient) FetchIssuerCertificate() (*x509.Certificate, error) {
-	u, err := url.Parse(c.dir.Directory)
-	if err != nil {
-		return nil, fmt.Errorf("acme: error parsing directory url: %v", err)
-	}
-
-	u.Path = "/acme/issuer-cert"
-	u.RawPath = u.Path
-	_, raw, err := c.getRaw(u.String(), http.StatusOK)
-	if err != nil {
-		return nil, err
-	}
-
-	cert, err := x509.ParseCertificate(raw)
-	if err != nil {
-		return cert, fmt.Errorf("acme: error parsing issuer certificate: %v", err)
-	}
-
-	return cert, nil
 }
 
 // Revokes a given certificate.

@@ -22,13 +22,6 @@ func TestAcmeClient_FetchCertificates(t *testing.T) {
 	}
 }
 
-func TestAcmeClient_FetchIssuerCertificate(t *testing.T) {
-	_, err := testClient.FetchIssuerCertificate()
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-}
-
 func TestAcmeClient_RevokeCertificate(t *testing.T) {
 	domains := []string{randString() + ".com"}
 	account, order, privKey := makeOrderFinal(t, domains)
