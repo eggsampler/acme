@@ -12,8 +12,8 @@ func TestAcmeClient_FetchCertificates(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expeceted no error, got: %v", err)
 	}
-	if len(certs) != 1 {
-		t.Fatalf("wrong number of certs, expected 1, got: %d", len(certs))
+	if len(certs) == 0 {
+		t.Fatal("no certs returned")
 	}
 	for _, d := range domains {
 		if err := certs[0].VerifyHostname(d); err != nil {
