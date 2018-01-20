@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"time"
 
-	"io"
-
 	"regexp"
 
 	"strings"
@@ -170,8 +168,14 @@ func encapsulateJws(nonceSource jose.NonceSource, requestUrl, keyId string, priv
 }
 
 // Helper function to perform an http post request and read the body.
-func (c AcmeClient) postRaw(requestUrl string, payload io.Reader, expectedStatus ...int) (*http.Response, []byte, error) {
-	req, err := http.NewRequest("POST", requestUrl, payload)
+// Will attempt to retry if error is badNonce
+func (c AcmeClient) postRaw(isRetry bool, requestUrl, keyId string, privateKey interface{}, payload interface{}, out interface{}, expectedStatus []int) (*http.Response, []byte, error) {
+	object, err := encapsulateJws(c.nonces, requestUrl, keyId, privateKey, payload)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	req, err := http.NewRequest("POST", requestUrl, strings.NewReader(object.FullSerialize()))
 	if err != nil {
 		return nil, nil, fmt.Errorf("acme: error creating request: %v", err)
 	}
@@ -184,7 +188,21 @@ func (c AcmeClient) postRaw(requestUrl string, payload io.Reader, expectedStatus
 	defer resp.Body.Close()
 
 	if err := checkError(resp, expectedStatus...); err != nil {
-		return resp, nil, err
+		if isRetry {
+			// don't attempt to retry if this attempt is the retry
+			return resp, nil, err
+		}
+		acmeErr, ok := err.(AcmeError)
+		if !ok {
+			// don't retry for an error we don't know about
+			return resp, nil, err
+		}
+		if !strings.HasSuffix(acmeErr.Type, ":badNonce") {
+			// only retry on a badNonce error
+			return resp, nil, err
+		}
+		// perform the retry
+		return c.postRaw(true, requestUrl, keyId, privateKey, payload, out, expectedStatus)
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
@@ -197,12 +215,7 @@ func (c AcmeClient) postRaw(requestUrl string, payload io.Reader, expectedStatus
 
 // Helper function for performing a http post to an acme resource.
 func (c AcmeClient) post(requestUrl, keyId string, privateKey interface{}, payload interface{}, out interface{}, expectedStatus ...int) (*http.Response, error) {
-	object, err := encapsulateJws(c.nonces, requestUrl, keyId, privateKey, payload)
-	if err != nil {
-		return nil, err
-	}
-
-	resp, body, err := c.postRaw(requestUrl, strings.NewReader(object.FullSerialize()), expectedStatus...)
+	resp, body, err := c.postRaw(false, requestUrl, keyId, privateKey, payload, out, expectedStatus)
 	if err != nil {
 		return resp, err
 	}
