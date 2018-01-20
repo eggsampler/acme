@@ -127,9 +127,23 @@ func (c AcmeClient) get(url string, out interface{}, expectedStatus ...int) (*ht
 // Encapsulates a payload into a JSON Web Signature
 // https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-6.2
 func encapsulateJws(nonceSource jose.NonceSource, requestUrl, keyId string, privateKey interface{}, payload interface{}) (*jose.JSONWebSignature, error) {
-	keyAlgo, err := keyAlgorithm(privateKey)
-	if err != nil {
-		return nil, err
+	var keyAlgo jose.SignatureAlgorithm
+	switch k := privateKey.(type) {
+	case *rsa.PrivateKey:
+		keyAlgo = jose.RS256
+	case *ecdsa.PrivateKey:
+		switch k.Params().Name {
+		case "P-256":
+			keyAlgo = jose.ES256
+		case "P-384":
+			keyAlgo = jose.ES384
+		case "P-521":
+			keyAlgo = jose.ES512
+		default:
+			return nil, fmt.Errorf("acme: unsupported private key ecdsa params: %s", k.Params().Name)
+		}
+	default:
+		return nil, fmt.Errorf("acme: unsupported private key type: %v", k)
 	}
 
 	rawPayload, err := json.Marshal(payload)
@@ -252,24 +266,4 @@ func fetchLink(resp *http.Response, wantedLink string) string {
 		}
 	}
 	return ""
-}
-
-func keyAlgorithm(privateKey interface{}) (jose.SignatureAlgorithm, error) {
-	switch k := privateKey.(type) {
-	case *rsa.PrivateKey:
-		return jose.RS256, nil
-	case *ecdsa.PrivateKey:
-		switch k.Params().Name {
-		case "P-256":
-			return jose.ES256, nil
-		case "P-384":
-			return jose.ES384, nil
-		case "P-521":
-			return jose.ES512, nil
-		default:
-			return "", fmt.Errorf("acme: unsupported private key ecdsa params: %s", k.Params().Name)
-		}
-	default:
-		return "", fmt.Errorf("acme: unsupported private key type: %v", k)
-	}
 }
