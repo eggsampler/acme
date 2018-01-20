@@ -41,7 +41,7 @@ func (c AcmeClient) NewAccount(privateKey interface{}, onlyReturnExisting, terms
 	}
 
 	account := AcmeAccount{}
-	resp, err := c.post(c.dir.NewAccount, "", privateKey, newAccountReq, &account, http.StatusOK, http.StatusCreated)
+	resp, err := c.post(c.Directory.NewAccount, "", privateKey, newAccountReq, &account, http.StatusOK, http.StatusCreated)
 	if err != nil {
 		return account, err
 	}
@@ -112,7 +112,7 @@ func (c AcmeClient) AccountKeyChange(account AcmeAccount, newPrivateKey interfac
 		NewKey:  newJwKeyPub,
 	}
 
-	innerJws, err := encapsulateJws(nil, c.dir.KeyChange, "", newPrivateKey, keyChangeReq)
+	innerJws, err := encapsulateJws(nil, c.Directory.KeyChange, "", newPrivateKey, keyChangeReq)
 	if err != nil {
 		return account, err
 	}
@@ -120,7 +120,7 @@ func (c AcmeClient) AccountKeyChange(account AcmeAccount, newPrivateKey interfac
 	var b json.RawMessage
 	b = []byte(innerJws.FullSerialize())
 
-	if _, err := c.post(c.dir.KeyChange, account.Url, account.PrivateKey, b, nil, http.StatusOK); err != nil {
+	if _, err := c.post(c.Directory.KeyChange, account.Url, account.PrivateKey, b, nil, http.StatusOK); err != nil {
 		return account, err
 	}
 

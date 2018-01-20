@@ -41,7 +41,7 @@ func TestNewClient(t *testing.T) {
 		t.Fatalf("expected error, got none")
 	}
 
-	if testClient.dir.NewAccount == "" {
+	if testClient.Directory.NewAccount == "" {
 		t.Fatalf("error creating new client: no new account url provided")
 	}
 }

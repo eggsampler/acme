@@ -43,12 +43,12 @@ func NewClient(directoryUrl string) (AcmeClient, error) {
 		}
 	}
 
-	if _, err := client.get(directoryUrl, &client.dir, http.StatusOK); err != nil {
+	if _, err := client.get(directoryUrl, &client.Directory, http.StatusOK); err != nil {
 		return client, err
 	}
 
-	client.dir.Directory = directoryUrl
-	ns.newNonceUrl = client.dir.NewNonce
+	client.Directory.Directory = directoryUrl
+	ns.newNonceUrl = client.Directory.NewNonce
 
 	return client, nil
 }

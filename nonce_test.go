@@ -27,7 +27,7 @@ func TestNonceStack_Nonce(t *testing.T) {
 		t.Fatal("expected error, got none")
 	}
 
-	ns.newNonceUrl = testClient.dir.NewNonce
+	ns.newNonceUrl = testClient.Directory.NewNonce
 	nonce, err = ns.Nonce()
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)

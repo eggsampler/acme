@@ -55,7 +55,7 @@ func (c AcmeClient) RevokeCertificate(account AcmeAccount, cert *x509.Certificat
 		Reason:      reason,
 	}
 
-	if _, err := c.post(c.dir.RevokeCert, "", certPrivKey, revokeReq, nil, http.StatusOK); err != nil {
+	if _, err := c.post(c.Directory.RevokeCert, "", certPrivKey, revokeReq, nil, http.StatusOK); err != nil {
 		return err
 	}
 

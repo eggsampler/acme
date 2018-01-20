@@ -55,7 +55,9 @@ type AcmeDirectory struct {
 type AcmeClient struct {
 	httpClient *http.Client
 	nonces     *nonceStack
-	dir        AcmeDirectory
+
+	// The directory object returned by the client connecting to a directory url.
+	Directory AcmeDirectory
 
 	// The amount of total time the AcmeClient will wait at most for a challenge to be updated or a certificate to be issued.
 	// Default 30 seconds if duration is not set or 0.
