@@ -120,9 +120,11 @@ func (c AcmeClient) AccountKeyChange(account AcmeAccount, newPrivateKey interfac
 	var b json.RawMessage
 	b = []byte(innerJws.FullSerialize())
 
-	if _, err := c.post(c.dir.KeyChange, account.Url, account.PrivateKey, b, nil); err != nil {
+	if _, err := c.post(c.dir.KeyChange, account.Url, account.PrivateKey, b, nil, http.StatusOK); err != nil {
 		return account, err
 	}
+
+	account.PrivateKey = newPrivateKey
 
 	return account, nil
 }
