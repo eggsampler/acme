@@ -15,7 +15,7 @@ import (
 )
 
 // Initiates a new order for a new certificate.
-// https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.4
+// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.4
 func (c AcmeClient) NewOrder(account AcmeAccount, identifiers []AcmeIdentifier) (AcmeOrder, error) {
 	newOrderReq := struct {
 		Identifiers []AcmeIdentifier `json:"identifiers"`
@@ -67,7 +67,7 @@ func checkOrderStatus(order AcmeOrder) (bool, error) {
 
 // Indicates to the acme server that the client considers an order complete and "finalizes" it.
 // If the server believes the authorizations have been filled successfully, a certificate should then be available.
-// https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.4
+// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.4
 func (c AcmeClient) FinalizeOrder(account AcmeAccount, order AcmeOrder, csr *x509.CertificateRequest) (AcmeOrder, error) {
 	finaliseReq := struct {
 		Csr string `json:"csr"`
@@ -111,7 +111,7 @@ func (c AcmeClient) FinalizeOrder(account AcmeAccount, order AcmeOrder, csr *x50
 
 // Fetches a list of orders given an account orders url.
 // Takes a url so the "next" http Link header can be used.
-// https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.1.2.1
+// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.1.2.1
 func (c AcmeClient) FetchOrdersList(ordersUrl string) (AcmeOrderList, error) {
 	orderListResp := AcmeOrderList{}
 	resp, err := c.get(ordersUrl, &orderListResp, http.StatusOK)

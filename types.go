@@ -16,7 +16,7 @@ var (
 )
 
 // Constants used for certificate revocation, used for RevokeCertificate
-// https://tools.ietf.org/html/rfc5280#section-5.3.1
+// More details: https://tools.ietf.org/html/rfc5280#section-5.3.1
 const (
 	ReasonUnspecified          = iota // 0
 	ReasonKeyCompromise               // 1
@@ -32,22 +32,26 @@ const (
 )
 
 // A directory object as returned from the client's directory url upon creation of client.
-// https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.1.1
+// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.1.1
 type AcmeDirectory struct {
-	NewNonce   string `json:"newNonce"`
-	NewAccount string `json:"newAccount"`
-	NewOrder   string `json:"newOrder"`
-	NewAuthz   string `json:"newAuthz"`
-	RevokeCert string `json:"revokeCert"`
-	KeyChange  string `json:"keyChange"`
-	Meta       struct {
+	NewNonce   string `json:"newNonce"`   // url to new nonce endpoint
+	NewAccount string `json:"newAccount"` // url to new account endpoint
+	NewOrder   string `json:"newOrder"`   // url to new order endpoint
+	NewAuthz   string `json:"newAuthz"`   // url to new authz endpoint
+	RevokeCert string `json:"revokeCert"` // url to revoke cert endpoint
+	KeyChange  string `json:"keyChange"`  // url to key change endpoint
+
+	// meta object containing directory metadata
+	// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-9.7.6
+	Meta struct {
 		TermsOfService          string   `json:"termsOfService"`
 		Website                 string   `json:"website"`
 		CaaIdentities           []string `json:"caaIdentities"`
 		ExternalAccountRequired bool     `json:"externalAccountRequired"`
 	} `json:"meta"`
 
-	Directory string `json:"-"`
+	// Directory url provided when creating a new acme client.
+	Url string `json:"-"`
 }
 
 // A client structure to interact with an ACME server.
@@ -60,16 +64,16 @@ type AcmeClient struct {
 	Directory AcmeDirectory
 
 	// The amount of total time the AcmeClient will wait at most for a challenge to be updated or a certificate to be issued.
-	// Default 30 seconds if duration is not set or 0.
+	// Default 30 seconds if duration is not set or if set to 0.
 	PollTimeout time.Duration
 
 	// The time between checking if a challenge has been updated or a certificate has been issued.
-	// Default 0.5 seconds if duration is not set or 0.
+	// Default 0.5 seconds if duration is not set or if set to 0.
 	PollInterval time.Duration
 }
 
 // A structure representing fields in an account object.
-// https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.1.2
+// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.1.2
 type AcmeAccount struct {
 	Status               string   `json:"status"`
 	Contact              []string `json:"contact"`
@@ -89,14 +93,14 @@ type AcmeAccount struct {
 }
 
 // An identifier object used in order and authorization objects
-// https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.1.3
+// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.1.3
 type AcmeIdentifier struct {
 	Type  string `json:"type"`
 	Value string `json:"value"`
 }
 
 // An order object, returned when fetching or creating a new order.
-// https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.1.3
+// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.1.3
 type AcmeOrder struct {
 	Status         string           `json:"status"`
 	Expires        time.Time        `json:"expires"`
@@ -106,11 +110,13 @@ type AcmeOrder struct {
 	Finalize       string           `json:"finalize"`
 	Certificate    string           `json:"certificate"`
 
-	Url string `json:"-"` // Provided by the rel="Location" Link http header
+	// Url for the order object.
+	// Provided by the rel="Location" Link http header
+	Url string `json:"-"`
 }
 
 // An authorization object returned when fetching an authorization in an order.
-// https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.1.4
+// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.1.4
 type AcmeAuthorization struct {
 	Identifier AcmeIdentifier  `json:"identifier"`
 	Status     string          `json:"status"`
@@ -123,7 +129,7 @@ type AcmeAuthorization struct {
 }
 
 // A challenge object fetched in an authorization or directly from the challenge url.
-// https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-8
+// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-8
 type AcmeChallenge struct {
 	Type             string    `json:"type"`
 	Status           string    `json:"status"`
@@ -137,7 +143,7 @@ type AcmeChallenge struct {
 }
 
 // An orders list challenge object.
-// https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.1.2.1
+// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.1.2.1
 type AcmeOrderList struct {
 	Orders []string `json:"orders"`
 

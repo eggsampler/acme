@@ -41,20 +41,20 @@ type acmeAccountFile struct {
 }
 
 func main() {
-	// acme directory url - defaults to lets encrypt v2 staging url if not provided
-	flag.StringVar(&directoryUrl, "dirurl", "https://acme-staging-v02.api.letsencrypt.org/directory", "acme directory url")
-	// a list of comma separated contact emails to use when creating a new account (optional, dont include 'mailto:' prefix)
-	flag.StringVar(&contactsList, "contact", "", "optional comma separated emails for new account contacts")
-	// a list of webroots that the acme key authorization files will be written to (don't include .acme-challenge/well-known)
-	flag.StringVar(&webroot, "webroot", "/var/www/html", "webroot path for domain(s)")
-	// a comma separated list of domains to issue a certificate for
-	flag.StringVar(&domains, "domains", "", "comma separated domain(s) to issue certificate for")
-	// the file that the account json data will be saved to/loaded from
-	flag.StringVar(&accountFile, "accountfile", "account.json", "account filename")
-	// they file the pem encoded certificate will be saved to
-	flag.StringVar(&certFile, "certfile", "cert.pem", "certificate output file")
-	// the file the pem encoded certificate private key will be saved to
-	flag.StringVar(&keyFile, "keyfile", "privkey.pem", "certificate private key output file")
+	flag.StringVar(&directoryUrl, "dirurl", "https://acme-staging-v02.api.letsencrypt.org/directory",
+		"acme directory url - defaults to lets encrypt v2 staging url if not provided")
+	flag.StringVar(&contactsList, "contact", "",
+		"a list of comma separated contact emails to use when creating a new account (optional, dont include 'mailto:' prefix)")
+	flag.StringVar(&webroot, "webroot", "/var/www/html",
+		"a webroot that the acme key authorization file will be written to (don't include /.acme-challenge/well-known/ suffix)")
+	flag.StringVar(&domains, "domains", "",
+		"a comma separated list of domains to issue a certificate for")
+	flag.StringVar(&accountFile, "accountfile", "account.json",
+		"the file that the account json data will be saved to/loaded from (will create new file if not exists)")
+	flag.StringVar(&certFile, "certfile", "cert.pem",
+		"the file that the pem encoded certificate chain will be saved to")
+	flag.StringVar(&keyFile, "keyfile", "privkey.pem",
+		"the file that the pem encoded certificate private key will be saved to")
 	flag.Parse()
 
 	// check domains are provided

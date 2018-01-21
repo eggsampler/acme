@@ -7,6 +7,8 @@ import (
 	"net/http"
 )
 
+// Errors returned by an acme server.
+// More details: https://tools.ietf.org/html/rfc7807
 type AcmeError struct {
 	Status      int    `json:"status"`
 	Type        string `json:"type"`
@@ -19,6 +21,7 @@ type AcmeError struct {
 	} `json:"subproblems"`
 }
 
+// Returns a human readable error string.
 func (err AcmeError) Error() string {
 	s := fmt.Sprintf("acme: error code %d %q: %s", err.Status, err.Type, err.Detail)
 	if len(err.SubProblems) > 0 {
@@ -32,6 +35,7 @@ func (err AcmeError) Error() string {
 	return s
 }
 
+// Helper function to determine if a response contains an expected status code, or otherwise an error object.
 func checkError(resp *http.Response, expectedStatuses ...int) error {
 	for _, statusCode := range expectedStatuses {
 		if resp.StatusCode == statusCode {

@@ -9,7 +9,7 @@ import (
 )
 
 // Downloads a certificate from the given url.
-// https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.4.2
+// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.4.2
 func (c AcmeClient) FetchCertificates(certificateUrl string) ([]*x509.Certificate, error) {
 	resp, raw, err := c.getRaw(certificateUrl, http.StatusOK)
 	if err != nil {
@@ -45,7 +45,7 @@ func (c AcmeClient) FetchCertificates(certificateUrl string) ([]*x509.Certificat
 }
 
 // Revokes a given certificate.
-// https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.6
+// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.6
 func (c AcmeClient) RevokeCertificate(account AcmeAccount, cert *x509.Certificate, certPrivKey interface{}, reason int) error {
 	revokeReq := struct {
 		Certificate string `json:"certificate"`
