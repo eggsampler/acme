@@ -81,7 +81,7 @@ func TestAcmeClient_FetchOrder(t *testing.T) {
 func newCSR(t *testing.T, domains []string) (*x509.CertificateRequest, interface{}) {
 	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
-		t.Fatalf("error generating privte key: %v", err)
+		t.Fatalf("error generating private key: %v", err)
 	}
 
 	tpl := &x509.CertificateRequest{
@@ -98,12 +98,12 @@ func newCSR(t *testing.T, domains []string) (*x509.CertificateRequest, interface
 
 	csrDer, err := x509.CreateCertificateRequest(rand.Reader, tpl, privKey)
 	if err != nil {
-		t.Fatalf("error generating privte key: %v", err)
+		t.Fatalf("error generating private key: %v", err)
 	}
 
 	csr, err := x509.ParseCertificateRequest(csrDer)
 	if err != nil {
-		t.Fatalf("error generating privte key: %v", err)
+		t.Fatalf("error generating private key: %v", err)
 	}
 
 	return csr, privKey
