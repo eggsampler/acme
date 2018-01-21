@@ -13,7 +13,7 @@ type nonceStack struct {
 	stack []string
 
 	client      http.Client
-	newNonceUrl string
+	newNonceURL string
 }
 
 // Pushes a nonce to the stack.
@@ -58,17 +58,17 @@ func (ns *nonceStack) Nonce() (string, error) {
 		return nonce, nil
 	}
 
-	if ns.newNonceUrl == "" {
+	if ns.newNonceURL == "" {
 		return "", errors.New("acme: no newNonce url")
 	}
 
-	req, err := http.NewRequest("HEAD", ns.newNonceUrl, nil)
+	req, err := http.NewRequest("HEAD", ns.newNonceURL, nil)
 	if err != nil {
 		return "", fmt.Errorf("acme: error creating newNonce request: %v", err)
 	}
 	req.Header.Set("User-Agent", userAgentString)
 
-	resp, err := ns.client.Head(ns.newNonceUrl)
+	resp, err := ns.client.Head(ns.newNonceURL)
 	if err != nil {
 		return "", fmt.Errorf("acme: error fetching new nonce: %v", err)
 	}

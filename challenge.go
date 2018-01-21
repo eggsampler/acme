@@ -9,9 +9,9 @@ import (
 	"time"
 )
 
-// Encodes a key authorization and provides a value to be put in the TXT record for the _acme-challenge DNS entry.
+// EncodeDNS01KeyAuthorization encodes a key authorization and provides a value to be put in the TXT record for the _acme-challenge DNS entry.
 // More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-8.5
-func EncodeDns01KeyAuthorization(keyAuth string) string {
+func EncodeDNS01KeyAuthorization(keyAuth string) string {
 	h := sha256.New()
 	h.Write([]byte(keyAuth))
 	return base64.RawURLEncoding.EncodeToString(h.Sum(nil))
@@ -34,7 +34,7 @@ func checkChallengeStatus(challenge AcmeChallenge) (bool, error) {
 	}
 }
 
-// Responds to a challenge to indicate to the server to complete the challenge.
+// UpdateChallenge responds to a challenge to indicate to the server to complete the challenge.
 // More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.5.1
 func (c AcmeClient) UpdateChallenge(account AcmeAccount, challenge AcmeChallenge) (AcmeChallenge, error) {
 	chalReq := struct {
@@ -79,10 +79,10 @@ func (c AcmeClient) UpdateChallenge(account AcmeAccount, challenge AcmeChallenge
 	}
 }
 
-// Fetches an existing challenge from the given url.
-func (c AcmeClient) FetchChallenge(challengeUrl string) (AcmeChallenge, error) {
+// FetchChallenge fetches an existing challenge from the given url.
+func (c AcmeClient) FetchChallenge(challengeURL string) (AcmeChallenge, error) {
 	challenge := AcmeChallenge{}
-	resp, err := c.get(challengeUrl, &challenge, http.StatusOK)
+	resp, err := c.get(challengeURL, &challenge, http.StatusOK)
 	if err != nil {
 		return challenge, err
 	}

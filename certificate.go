@@ -8,10 +8,10 @@ import (
 	"net/http"
 )
 
-// Downloads a certificate from the given url.
+// FetchCertificates downloads a certificate chain from a url given in an order certificate.
 // More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.4.2
-func (c AcmeClient) FetchCertificates(certificateUrl string) ([]*x509.Certificate, error) {
-	resp, raw, err := c.getRaw(certificateUrl, http.StatusOK)
+func (c AcmeClient) FetchCertificates(certificateURL string) ([]*x509.Certificate, error) {
+	resp, raw, err := c.getRaw(certificateURL, http.StatusOK)
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +44,7 @@ func (c AcmeClient) FetchCertificates(certificateUrl string) ([]*x509.Certificat
 	return certs, nil
 }
 
-// Revokes a given certificate.
+// RevokeCertificate revokes a given certificate given the certificate private key and a reason.
 // More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.6
 func (c AcmeClient) RevokeCertificate(account AcmeAccount, cert *x509.Certificate, certPrivKey interface{}, reason int) error {
 	revokeReq := struct {

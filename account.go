@@ -27,7 +27,7 @@ func makeThumbprint(privateKey interface{}) (string, error) {
 	return base64.RawURLEncoding.EncodeToString(bThumbprint), nil
 }
 
-// Registers a new account with the acme service
+// NewAccount registers a new account with the acme service
 // More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.3
 func (c AcmeClient) NewAccount(privateKey interface{}, onlyReturnExisting, termsOfServiceAgreed bool, contact ...string) (AcmeAccount, error) {
 	newAccountReq := struct {
@@ -65,7 +65,7 @@ func (c AcmeClient) NewAccount(privateKey interface{}, onlyReturnExisting, terms
 	return account, nil
 }
 
-// Updates an existing account with the acme service.
+// UpdateAccount updates an existing account with the acme service.
 // More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.3.2
 func (c AcmeClient) UpdateAccount(account AcmeAccount, termsOfServiceAgreed bool, contact ...string) (AcmeAccount, error) {
 	updateAccountReq := struct {
@@ -91,7 +91,7 @@ func (c AcmeClient) UpdateAccount(account AcmeAccount, termsOfServiceAgreed bool
 	return account, nil
 }
 
-// Rolls over an account to a new key.
+// AccountKeyChange rolls over an account to a new key.
 // More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.3.6
 func (c AcmeClient) AccountKeyChange(account AcmeAccount, newPrivateKey interface{}) (AcmeAccount, error) {
 	var newJwKeyPub jose.JSONWebKey
@@ -129,7 +129,7 @@ func (c AcmeClient) AccountKeyChange(account AcmeAccount, newPrivateKey interfac
 	return account, nil
 }
 
-// Deactivates a given account.
+// DeactivateAccount deactivates a given account.
 // More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.3.7
 func (c AcmeClient) DeactivateAccount(account AcmeAccount) (AcmeAccount, error) {
 	deactivateReq := struct {

@@ -14,7 +14,7 @@ import (
 	"crypto/x509"
 )
 
-// Initiates a new order for a new certificate.
+// NewOrder initiates a new order for a new certificate.
 // More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.4
 func (c AcmeClient) NewOrder(account AcmeAccount, identifiers []AcmeIdentifier) (AcmeOrder, error) {
 	newOrderReq := struct {
@@ -33,12 +33,12 @@ func (c AcmeClient) NewOrder(account AcmeAccount, identifiers []AcmeIdentifier) 
 	return newOrderResp, nil
 }
 
-// Fetches an existing order given an order url.
-func (c AcmeClient) FetchOrder(orderUrl string) (AcmeOrder, error) {
+// FetchOrder fetches an existing order given an order url.
+func (c AcmeClient) FetchOrder(orderURL string) (AcmeOrder, error) {
 	orderResp := AcmeOrder{
-		Url: orderUrl, // boulder response doesn't seem to contain location header for this request
+		Url: orderURL, // boulder response doesn't seem to contain location header for this request
 	}
-	_, err := c.get(orderUrl, &orderResp, http.StatusOK)
+	_, err := c.get(orderURL, &orderResp, http.StatusOK)
 	if err != nil {
 		return orderResp, err
 	}
@@ -65,7 +65,7 @@ func checkOrderStatus(order AcmeOrder) (bool, error) {
 	}
 }
 
-// Indicates to the acme server that the client considers an order complete and "finalizes" it.
+// FinalizeOrder indicates to the acme server that the client considers an order complete and "finalizes" it.
 // If the server believes the authorizations have been filled successfully, a certificate should then be available.
 // More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.4
 func (c AcmeClient) FinalizeOrder(account AcmeAccount, order AcmeOrder, csr *x509.CertificateRequest) (AcmeOrder, error) {
@@ -109,12 +109,12 @@ func (c AcmeClient) FinalizeOrder(account AcmeAccount, order AcmeOrder, csr *x50
 	}
 }
 
-// Fetches a list of orders given an account orders url.
+// FetchOrdersList fetches a list of orders given an account orders url.
 // Takes a url so the "next" http Link header can be used.
 // More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.1.2.1
-func (c AcmeClient) FetchOrdersList(ordersUrl string) (AcmeOrderList, error) {
+func (c AcmeClient) FetchOrdersList(ordersURL string) (AcmeOrderList, error) {
 	orderListResp := AcmeOrderList{}
-	resp, err := c.get(ordersUrl, &orderListResp, http.StatusOK)
+	resp, err := c.get(ordersURL, &orderListResp, http.StatusOK)
 	if err != nil {
 		return orderListResp, err
 	}

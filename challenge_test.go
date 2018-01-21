@@ -19,7 +19,7 @@ func TestEncodeDns01KeyAuthorization(t *testing.T) {
 	}
 
 	for _, currentTest := range tests {
-		e := EncodeDns01KeyAuthorization(currentTest.KeyAuth)
+		e := EncodeDNS01KeyAuthorization(currentTest.KeyAuth)
 		if e != currentTest.Encoded {
 			t.Fatalf("expected: %s, got: %s", currentTest.Encoded, e)
 		}

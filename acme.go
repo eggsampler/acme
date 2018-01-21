@@ -23,9 +23,9 @@ const (
 	userAgentString = "eggsampler-acme/1.0 Go-http-client/1.1"
 )
 
-// Creates a new directory client given a valid directory url.
+// NewClient creates a new acme client given a valid directory url.
 // More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.1.1
-func NewClient(directoryUrl string) (AcmeClient, error) {
+func NewClient(directoryURL string) (AcmeClient, error) {
 	ns := &nonceStack{}
 
 	client := AcmeClient{
@@ -43,12 +43,12 @@ func NewClient(directoryUrl string) (AcmeClient, error) {
 		}
 	}
 
-	if _, err := client.get(directoryUrl, &client.Directory, http.StatusOK); err != nil {
+	if _, err := client.get(directoryURL, &client.Directory, http.StatusOK); err != nil {
 		return client, err
 	}
 
-	client.Directory.Url = directoryUrl
-	ns.newNonceUrl = client.Directory.NewNonce
+	client.Directory.Url = directoryURL
+	ns.newNonceURL = client.Directory.NewNonce
 
 	return client, nil
 }
@@ -126,7 +126,7 @@ func (c AcmeClient) get(url string, out interface{}, expectedStatus ...int) (*ht
 
 // Encapsulates a payload into a JSON Web Signature
 // More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-6.2
-func encapsulateJws(nonceSource jose.NonceSource, requestUrl, keyId string, privateKey interface{}, payload interface{}) (*jose.JSONWebSignature, error) {
+func encapsulateJws(nonceSource jose.NonceSource, requestURL, keyID string, privateKey interface{}, payload interface{}) (*jose.JSONWebSignature, error) {
 	var keyAlgo jose.SignatureAlgorithm
 	switch k := privateKey.(type) {
 	case *rsa.PrivateKey:
@@ -155,10 +155,10 @@ func encapsulateJws(nonceSource jose.NonceSource, requestUrl, keyId string, priv
 	if nonceSource != nil {
 		opts.NonceSource = nonceSource
 	}
-	opts.WithHeader("url", requestUrl)
+	opts.WithHeader("url", requestURL)
 	// jwk and kid fields are mutually exclusive
-	if keyId != "" {
-		opts.WithHeader("kid", keyId)
+	if keyID != "" {
+		opts.WithHeader("kid", keyID)
 	} else {
 		opts.EmbedJWK = true
 	}
@@ -183,13 +183,13 @@ func encapsulateJws(nonceSource jose.NonceSource, requestUrl, keyId string, priv
 
 // Helper function to perform an http post request and read the body.
 // Will attempt to retry if error is badNonce
-func (c AcmeClient) postRaw(isRetry bool, requestUrl, keyId string, privateKey interface{}, payload interface{}, out interface{}, expectedStatus []int) (*http.Response, []byte, error) {
-	object, err := encapsulateJws(c.nonces, requestUrl, keyId, privateKey, payload)
+func (c AcmeClient) postRaw(isRetry bool, requestURL, keyID string, privateKey interface{}, payload interface{}, out interface{}, expectedStatus []int) (*http.Response, []byte, error) {
+	object, err := encapsulateJws(c.nonces, requestURL, keyID, privateKey, payload)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	req, err := http.NewRequest("POST", requestUrl, strings.NewReader(object.FullSerialize()))
+	req, err := http.NewRequest("POST", requestURL, strings.NewReader(object.FullSerialize()))
 	if err != nil {
 		return nil, nil, fmt.Errorf("acme: error creating request: %v", err)
 	}
@@ -216,7 +216,7 @@ func (c AcmeClient) postRaw(isRetry bool, requestUrl, keyId string, privateKey i
 			return resp, nil, err
 		}
 		// perform the retry
-		return c.postRaw(true, requestUrl, keyId, privateKey, payload, out, expectedStatus)
+		return c.postRaw(true, requestURL, keyID, privateKey, payload, out, expectedStatus)
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
@@ -228,8 +228,8 @@ func (c AcmeClient) postRaw(isRetry bool, requestUrl, keyId string, privateKey i
 }
 
 // Helper function for performing a http post to an acme resource.
-func (c AcmeClient) post(requestUrl, keyId string, privateKey interface{}, payload interface{}, out interface{}, expectedStatus ...int) (*http.Response, error) {
-	resp, body, err := c.postRaw(false, requestUrl, keyId, privateKey, payload, out, expectedStatus)
+func (c AcmeClient) post(requestURL, keyID string, privateKey interface{}, payload interface{}, out interface{}, expectedStatus ...int) (*http.Response, error) {
+	resp, body, err := c.postRaw(false, requestURL, keyID, privateKey, payload, out, expectedStatus)
 	if err != nil {
 		return resp, err
 	}

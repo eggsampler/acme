@@ -22,12 +22,12 @@ func TestNonceStack_Nonce(t *testing.T) {
 		t.Fatal("expected error, got none")
 	}
 
-	ns.newNonceUrl = "http://google.com/"
+	ns.newNonceURL = "http://google.com/"
 	if _, err = ns.Nonce(); err == nil {
 		t.Fatal("expected error, got none")
 	}
 
-	ns.newNonceUrl = testClient.Directory.NewNonce
+	ns.newNonceURL = testClient.Directory.NewNonce
 	nonce, err = ns.Nonce()
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)

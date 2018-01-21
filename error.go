@@ -7,7 +7,7 @@ import (
 	"net/http"
 )
 
-// Errors returned by an acme server.
+// AcmeError represents an error returned by an acme server.
 // More details: https://tools.ietf.org/html/rfc7807
 type AcmeError struct {
 	Status      int    `json:"status"`

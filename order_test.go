@@ -160,7 +160,7 @@ func TestWildcard(t *testing.T) {
 			t.Fatal("no dns challenge provided")
 		}
 
-		setReq := fmt.Sprintf(`{"host":"%s","value":"%s"}`, "_acme-challenge."+currentAuth.Identifier.Value+".", EncodeDns01KeyAuthorization(chal.KeyAuthorization))
+		setReq := fmt.Sprintf(`{"host":"%s","value":"%s"}`, "_acme-challenge."+currentAuth.Identifier.Value+".", EncodeDNS01KeyAuthorization(chal.KeyAuthorization))
 		if _, err := http.Post("http://localhost:8055/set-txt", "application/json", strings.NewReader(setReq)); err != nil {
 			t.Fatalf("error setting txt: %v", err)
 		}
