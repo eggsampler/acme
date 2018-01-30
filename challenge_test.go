@@ -1,11 +1,6 @@
 package acme
 
-import (
-	"context"
-	"net/http"
-	"testing"
-	"time"
-)
+import "testing"
 
 func TestEncodeDns01KeyAuthorization(t *testing.T) {
 	tests := []struct {
@@ -43,19 +38,7 @@ func makeChal(t *testing.T, identifiers []AcmeIdentifier, challengeType string) 
 
 func updateChalHttp(t *testing.T, account AcmeAccount, challenge AcmeChallenge) AcmeChallenge {
 	// test challenge succeeding after error
-	s := &http.Server{Addr: ":5002"}
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(challenge.KeyAuthorization))
-	})
-	s.Handler = mux
-	go func() {
-		if err := s.ListenAndServe(); err != nil {
-			if err != http.ErrServerClosed {
-				t.Fatalf("error listening: %v", err)
-			}
-		}
-	}()
+	challengeMap.Store(challenge.Token, challenge.KeyAuthorization)
 	challenge, err := testClient.UpdateChallenge(account, challenge)
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
@@ -63,9 +46,6 @@ func updateChalHttp(t *testing.T, account AcmeAccount, challenge AcmeChallenge) 
 	if challenge.Status != "valid" {
 		t.Fatalf("expected valid challenge, got: %s", challenge.Status)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-	defer s.Shutdown(ctx)
 
 	return challenge
 }
