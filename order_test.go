@@ -192,17 +192,3 @@ func TestWildcard(t *testing.T) {
 		}
 	}
 }
-
-func TestAcmeClient_FetchOrdersList(t *testing.T) {
-	account, _, _ := makeOrderFinal(t, []string{randString() + ".com"})
-	if account.Orders == "" {
-		t.Fatalf("no account orders url")
-	}
-	orderList, err := testClient.FetchOrdersList(account.Orders)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if len(orderList.Orders) != 1 {
-		t.Fatalf("expected 1 order, got: %d", len(orderList.Orders))
-	}
-}
