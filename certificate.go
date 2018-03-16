@@ -44,9 +44,9 @@ func (c AcmeClient) FetchCertificates(certificateURL string) ([]*x509.Certificat
 	return certs, nil
 }
 
-// RevokeCertificate revokes a given certificate given the certificate private key and a reason.
+// RevokeCertificate revokes a given certificate given the certificate key or account key, and a reason.
 // More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.6
-func (c AcmeClient) RevokeCertificate(account AcmeAccount, cert *x509.Certificate, certPrivKey interface{}, reason int) error {
+func (c AcmeClient) RevokeCertificate(account AcmeAccount, cert *x509.Certificate, key interface{}, reason int) error {
 	revokeReq := struct {
 		Certificate string `json:"certificate"`
 		Reason      int    `json:"reason"`
@@ -55,7 +55,12 @@ func (c AcmeClient) RevokeCertificate(account AcmeAccount, cert *x509.Certificat
 		Reason:      reason,
 	}
 
-	if _, err := c.post(c.Directory.RevokeCert, "", certPrivKey, revokeReq, nil, http.StatusOK); err != nil {
+	kid := ""
+	if key == account.PrivateKey {
+		kid = account.Url
+	}
+
+	if _, err := c.post(c.Directory.RevokeCert, kid, key, revokeReq, nil, http.StatusOK); err != nil {
 		return err
 	}
 

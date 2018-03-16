@@ -23,6 +23,7 @@ func TestAcmeClient_FetchCertificates(t *testing.T) {
 }
 
 func TestAcmeClient_RevokeCertificate(t *testing.T) {
+	// test revoking cert with cert key
 	domains := []string{randString() + ".com"}
 	account, order, privKey := makeOrderFinal(t, domains)
 	if order.Certificate == "" {
@@ -33,6 +34,22 @@ func TestAcmeClient_RevokeCertificate(t *testing.T) {
 		t.Fatalf("expeceted no error, got: %v", err)
 	}
 	if err := testClient.RevokeCertificate(account, certs[0], privKey, ReasonUnspecified); err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+}
+
+func TestAcmeClient_RevokeCertificate2(t *testing.T) {
+	// test revoking cert with account key
+	domains := []string{randString() + ".com"}
+	account, order, _ := makeOrderFinal(t, domains)
+	if order.Certificate == "" {
+		t.Fatalf("no certificate: %+v", order)
+	}
+	certs, err := testClient.FetchCertificates(order.Certificate)
+	if err != nil {
+		t.Fatalf("expeceted no error, got: %v", err)
+	}
+	if err := testClient.RevokeCertificate(account, certs[0], account.PrivateKey, ReasonUnspecified); err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
 }
