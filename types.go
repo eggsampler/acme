@@ -122,6 +122,7 @@ type AcmeAuthorization struct {
 	Status     string          `json:"status"`
 	Expires    time.Time       `json:"expires"`
 	Challenges []AcmeChallenge `json:"challenges"`
+	Wildcard   bool            `json:"wildcard"`
 
 	// For convenience access to the provided challenges
 	ChallengeMap   map[string]AcmeChallenge `json:"-"`
