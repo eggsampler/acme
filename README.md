@@ -4,7 +4,7 @@
 
 ## About
 
-This is a Go client library implementation for the [ACME v2 revision 09](https://tools.ietf.org/html/draft-ietf-acme-acme-09) specification, specifically designed for use with the [Let's Encrypt](https://letsencrypt.org/) service. 
+This is a Go client library implementation for the [ACME v2 revision 10](https://tools.ietf.org/html/draft-ietf-acme-acme-10) specification, specifically for use with the [Let's Encrypt](https://letsencrypt.org/) service. 
 
 The library is designed to provide a wrapper over exposed directory endpoints and wrap the objects in easy to use structures.
 

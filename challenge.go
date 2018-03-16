@@ -10,7 +10,7 @@ import (
 )
 
 // EncodeDNS01KeyAuthorization encodes a key authorization and provides a value to be put in the TXT record for the _acme-challenge DNS entry.
-// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-8.5
+// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-8.4
 func EncodeDNS01KeyAuthorization(keyAuth string) string {
 	h := sha256.New()
 	h.Write([]byte(keyAuth))
@@ -35,7 +35,7 @@ func checkChallengeStatus(challenge AcmeChallenge) (bool, error) {
 }
 
 // UpdateChallenge responds to a challenge to indicate to the server to complete the challenge.
-// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.5.1
+// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.5.1
 func (c AcmeClient) UpdateChallenge(account AcmeAccount, challenge AcmeChallenge) (AcmeChallenge, error) {
 	chalReq := struct {
 		KeyAuthorization string `json:"keyAuthorization"`

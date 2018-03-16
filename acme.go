@@ -24,7 +24,7 @@ const (
 )
 
 // NewClient creates a new acme client given a valid directory url.
-// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.1.1
+// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.1.1
 func NewClient(directoryURL string) (AcmeClient, error) {
 	ns := &nonceStack{}
 
@@ -69,7 +69,7 @@ func (c AcmeClient) getPollingDurations() (time.Duration, time.Duration) {
 // Helper function to have a central point for performing http requests.
 // Stores any returned nonces in the stack.
 func (c AcmeClient) do(req *http.Request) (*http.Response, error) {
-	// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-6.1
+	// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-6.1
 	// identifier for this client, as well as the default go user agent
 	req.Header.Set("User-Agent", userAgentString)
 
@@ -125,7 +125,7 @@ func (c AcmeClient) get(url string, out interface{}, expectedStatus ...int) (*ht
 }
 
 // Encapsulates a payload into a JSON Web Signature
-// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-6.2
+// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-6.2
 func encapsulateJws(nonceSource jose.NonceSource, requestURL, keyID string, privateKey interface{}, payload interface{}) (*jose.JSONWebSignature, error) {
 	var keyAlgo jose.SignatureAlgorithm
 	switch k := privateKey.(type) {

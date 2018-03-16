@@ -32,7 +32,7 @@ const (
 )
 
 // A directory object as returned from the client's directory url upon creation of client.
-// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.1.1
+// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.1.1
 type AcmeDirectory struct {
 	NewNonce   string `json:"newNonce"`   // url to new nonce endpoint
 	NewAccount string `json:"newAccount"` // url to new account endpoint
@@ -42,7 +42,7 @@ type AcmeDirectory struct {
 	KeyChange  string `json:"keyChange"`  // url to key change endpoint
 
 	// meta object containing directory metadata
-	// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-9.7.6
+	// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-9.7.6
 	Meta struct {
 		TermsOfService          string   `json:"termsOfService"`
 		Website                 string   `json:"website"`
@@ -55,7 +55,7 @@ type AcmeDirectory struct {
 }
 
 // A client structure to interact with an ACME server.
-// This is typically be how most, if not all, of the communication between the client and server occurs.
+// This is typically how most, if not all, of the communication between the client and server occurs.
 type AcmeClient struct {
 	httpClient *http.Client
 	nonces     *nonceStack
@@ -73,7 +73,7 @@ type AcmeClient struct {
 }
 
 // A structure representing fields in an account object.
-// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.1.2
+// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.1.2
 type AcmeAccount struct {
 	Status               string   `json:"status"`
 	Contact              []string `json:"contact"`
@@ -88,19 +88,19 @@ type AcmeAccount struct {
 	PrivateKey interface{} `json:"-"`
 
 	// SHA-256 digest JWK_Thumbprint of the account key.
-	// Used in updating challenges, see: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-8.1
+	// Used in updating challenges, see: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-8.1
 	Thumbprint string `json:"-"`
 }
 
 // An identifier object used in order and authorization objects
-// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.1.3
+// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.1.3
 type AcmeIdentifier struct {
 	Type  string `json:"type"`
 	Value string `json:"value"`
 }
 
 // An order object, returned when fetching or creating a new order.
-// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.1.3
+// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.1.3
 type AcmeOrder struct {
 	Status         string           `json:"status"`
 	Expires        time.Time        `json:"expires"`
@@ -116,7 +116,7 @@ type AcmeOrder struct {
 }
 
 // An authorization object returned when fetching an authorization in an order.
-// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.1.4
+// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.1.4
 type AcmeAuthorization struct {
 	Identifier AcmeIdentifier  `json:"identifier"`
 	Status     string          `json:"status"`
@@ -129,7 +129,7 @@ type AcmeAuthorization struct {
 }
 
 // A challenge object fetched in an authorization or directly from the challenge url.
-// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-8
+// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-8
 type AcmeChallenge struct {
 	Type             string    `json:"type"`
 	Status           string    `json:"status"`
@@ -143,7 +143,7 @@ type AcmeChallenge struct {
 }
 
 // An orders list challenge object.
-// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.1.2.1
+// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.1.2.1
 type AcmeOrderList struct {
 	Orders []string `json:"orders"`
 

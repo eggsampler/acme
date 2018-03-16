@@ -17,7 +17,7 @@ import (
 )
 
 // Helper function to make an account "thumbprint" used as part of authorization challenges
-// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-8.1
+// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-8.1
 func makeThumbprint(privateKey interface{}) (string, error) {
 	jwk := jose.JSONWebKey{Key: privateKey}
 	bThumbprint, err := jwk.Thumbprint(crypto.SHA256)
@@ -28,7 +28,7 @@ func makeThumbprint(privateKey interface{}) (string, error) {
 }
 
 // NewAccount registers a new account with the acme service
-// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.3
+// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.3
 func (c AcmeClient) NewAccount(privateKey interface{}, onlyReturnExisting, termsOfServiceAgreed bool, contact ...string) (AcmeAccount, error) {
 	newAccountReq := struct {
 		OnlyReturnExisting   bool     `json:"onlyReturnExisting"`
@@ -66,7 +66,7 @@ func (c AcmeClient) NewAccount(privateKey interface{}, onlyReturnExisting, terms
 }
 
 // UpdateAccount updates an existing account with the acme service.
-// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.3.2
+// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.3.2
 func (c AcmeClient) UpdateAccount(account AcmeAccount, termsOfServiceAgreed bool, contact ...string) (AcmeAccount, error) {
 	updateAccountReq := struct {
 		TermsOfServiceAgreed bool     `json:"termsOfServiceAgreed"`
@@ -92,7 +92,7 @@ func (c AcmeClient) UpdateAccount(account AcmeAccount, termsOfServiceAgreed bool
 }
 
 // AccountKeyChange rolls over an account to a new key.
-// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.3.6
+// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.3.6
 func (c AcmeClient) AccountKeyChange(account AcmeAccount, newPrivateKey interface{}) (AcmeAccount, error) {
 	var newJwKeyPub jose.JSONWebKey
 	switch k := newPrivateKey.(type) {
@@ -130,7 +130,7 @@ func (c AcmeClient) AccountKeyChange(account AcmeAccount, newPrivateKey interfac
 }
 
 // DeactivateAccount deactivates a given account.
-// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-09#section-7.3.7
+// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.3.7
 func (c AcmeClient) DeactivateAccount(account AcmeAccount) (AcmeAccount, error) {
 	deactivateReq := struct {
 		Status string `json:"status"`
