@@ -1,6 +1,7 @@
 package acme
 
 import (
+	"crypto"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
@@ -46,7 +47,7 @@ func (c AcmeClient) FetchCertificates(certificateURL string) ([]*x509.Certificat
 
 // RevokeCertificate revokes a given certificate given the certificate key or account key, and a reason.
 // More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.6
-func (c AcmeClient) RevokeCertificate(account AcmeAccount, cert *x509.Certificate, key interface{}, reason int) error {
+func (c AcmeClient) RevokeCertificate(account AcmeAccount, cert *x509.Certificate, key crypto.Signer, reason int) error {
 	revokeReq := struct {
 		Certificate string `json:"certificate"`
 		Reason      int    `json:"reason"`

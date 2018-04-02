@@ -3,6 +3,7 @@ package acme
 import (
 	"testing"
 
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -78,7 +79,7 @@ func TestAcmeClient_FetchOrder(t *testing.T) {
 	}
 }
 
-func newCSR(t *testing.T, domains []string) (*x509.CertificateRequest, interface{}) {
+func newCSR(t *testing.T, domains []string) (*x509.CertificateRequest, crypto.Signer) {
 	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		t.Fatalf("error generating private key: %v", err)
@@ -109,7 +110,7 @@ func newCSR(t *testing.T, domains []string) (*x509.CertificateRequest, interface
 	return csr, privKey
 }
 
-func makeOrderFinal(t *testing.T, domains []string) (AcmeAccount, AcmeOrder, interface{}) {
+func makeOrderFinal(t *testing.T, domains []string) (AcmeAccount, AcmeOrder, crypto.Signer) {
 	csr, privKey := newCSR(t, domains)
 
 	var identifiers []AcmeIdentifier

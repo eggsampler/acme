@@ -6,10 +6,11 @@ import (
 	"crypto/rand"
 	"testing"
 
+	"crypto"
 	"reflect"
 )
 
-func makePrivateKey(t *testing.T) interface{} {
+func makePrivateKey(t *testing.T) crypto.Signer {
 	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		t.Fatalf("error creating account private key: %v", err)

@@ -6,30 +6,12 @@ import (
 	"fmt"
 
 	"crypto"
-	"encoding/base64"
-
 	"encoding/json"
-
-	"crypto/ecdsa"
-	"crypto/rsa"
-
-	"gopkg.in/square/go-jose.v2"
 )
-
-// Helper function to make an account "thumbprint" used as part of authorization challenges
-// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-8.1
-func makeThumbprint(privateKey interface{}) (string, error) {
-	jwk := jose.JSONWebKey{Key: privateKey}
-	bThumbprint, err := jwk.Thumbprint(crypto.SHA256)
-	if err != nil {
-		return "", fmt.Errorf("acme: error making account key thumbprint: %v", err)
-	}
-	return base64.RawURLEncoding.EncodeToString(bThumbprint), nil
-}
 
 // NewAccount registers a new account with the acme service
 // More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.3
-func (c AcmeClient) NewAccount(privateKey interface{}, onlyReturnExisting, termsOfServiceAgreed bool, contact ...string) (AcmeAccount, error) {
+func (c AcmeClient) NewAccount(privateKey crypto.Signer, onlyReturnExisting, termsOfServiceAgreed bool, contact ...string) (AcmeAccount, error) {
 	newAccountReq := struct {
 		OnlyReturnExisting   bool     `json:"onlyReturnExisting"`
 		TermsOfServiceAgreed bool     `json:"termsOfServiceAgreed"`
@@ -50,7 +32,7 @@ func (c AcmeClient) NewAccount(privateKey interface{}, onlyReturnExisting, terms
 	account.PrivateKey = privateKey
 
 	if account.Thumbprint == "" {
-		account.Thumbprint, err = makeThumbprint(account.PrivateKey)
+		account.Thumbprint, err = JWKThumbprint(account.PrivateKey.Public())
 		if err != nil {
 			return account, err
 		}
@@ -82,7 +64,7 @@ func (c AcmeClient) UpdateAccount(account AcmeAccount, termsOfServiceAgreed bool
 	}
 
 	if account.Thumbprint == "" {
-		account.Thumbprint, err = makeThumbprint(account.PrivateKey)
+		account.Thumbprint, err = JWKThumbprint(account.PrivateKey.Public())
 		if err != nil {
 			return account, err
 		}
@@ -93,34 +75,31 @@ func (c AcmeClient) UpdateAccount(account AcmeAccount, termsOfServiceAgreed bool
 
 // AccountKeyChange rolls over an account to a new key.
 // More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.3.6
-func (c AcmeClient) AccountKeyChange(account AcmeAccount, newPrivateKey interface{}) (AcmeAccount, error) {
-	var newJwKeyPub jose.JSONWebKey
-	switch k := newPrivateKey.(type) {
-	case *rsa.PrivateKey:
-		newJwKeyPub = jose.JSONWebKey{Algorithm: "RSA", Key: k.Public()}
-	case *ecdsa.PrivateKey:
-		newJwKeyPub = jose.JSONWebKey{Algorithm: "ECDSA", Key: k.Public()}
-	default:
-		return account, fmt.Errorf("acme: unsupported private key type: %+v", k)
+func (c AcmeClient) AccountKeyChange(account AcmeAccount, newPrivateKey crypto.Signer) (AcmeAccount, error) {
+	newJwkKeyPub, err := jwkEncode(newPrivateKey.Public())
+	if err != nil {
+		return account, fmt.Errorf("acme: error encoding new private key: %v", err)
 	}
 
 	keyChangeReq := struct {
 		Account string          `json:"account"`
-		NewKey  jose.JSONWebKey `json:"newKey"`
+		NewKey  json.RawMessage `json:"newKey"`
 	}{
 		Account: account.Url,
-		NewKey:  newJwKeyPub,
+		NewKey:  []byte(newJwkKeyPub),
 	}
 
-	innerJws, err := encapsulateJws(nil, c.Directory.KeyChange, "", newPrivateKey, keyChangeReq)
+	nonce, err := c.nonces.Nonce()
 	if err != nil {
 		return account, err
 	}
 
-	var b json.RawMessage
-	b = []byte(innerJws.FullSerialize())
+	innerJws, err := jwsEncodeJSON(keyChangeReq, newPrivateKey, c.Directory.KeyChange, "", nonce)
+	if err != nil {
+		return account, fmt.Errorf("acme: error encoding inner jws: %v", err)
+	}
 
-	if _, err := c.post(c.Directory.KeyChange, account.Url, account.PrivateKey, b, nil, http.StatusOK); err != nil {
+	if _, err := c.post(c.Directory.KeyChange, account.Url, account.PrivateKey, json.RawMessage(innerJws), nil, http.StatusOK); err != nil {
 		return account, err
 	}
 

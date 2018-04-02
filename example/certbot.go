@@ -36,8 +36,8 @@ var (
 )
 
 type acmeAccountFile struct {
-	PrivateKey interface{} `json:"privateKey"`
-	Url        string      `json:"url"`
+	PrivateKey *ecdsa.PrivateKey `json:"privateKey"`
+	Url        string            `json:"url"`
 }
 
 func main() {
@@ -240,7 +240,7 @@ func createAccount(client acme.AcmeClient) (acme.AcmeAccount, error) {
 	if err != nil {
 		return acme.AcmeAccount{}, fmt.Errorf("error creating new account: %v", err)
 	}
-	raw, err := json.Marshal(acmeAccountFile{PrivateKey: account.PrivateKey, Url: account.Url})
+	raw, err := json.Marshal(acmeAccountFile{PrivateKey: privKey, Url: account.Url})
 	if err != nil {
 		return acme.AcmeAccount{}, fmt.Errorf("error parsing new account: %v", err)
 	}

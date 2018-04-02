@@ -12,7 +12,7 @@ type nonceStack struct {
 	lock  sync.Mutex
 	stack []string
 
-	client      http.Client
+	client      *http.Client
 	newNonceURL string
 }
 
@@ -50,7 +50,6 @@ func (ns *nonceStack) pop() string {
 	return v
 }
 
-// NonceSource in gopkg.in/square/go-jose.v2/signing.go
 // Used to insert a nonce field into a jws header.
 func (ns *nonceStack) Nonce() (string, error) {
 	nonce := ns.pop()

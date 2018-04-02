@@ -11,12 +11,8 @@ import (
 
 	"strings"
 
-	"crypto/ecdsa"
-	"crypto/rsa"
-
-	"crypto/tls"
-
-	"gopkg.in/square/go-jose.v2"
+	"bytes"
+	"crypto"
 )
 
 const (
@@ -25,32 +21,32 @@ const (
 
 // NewClient creates a new acme client given a valid directory url.
 // More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.1.1
-func NewClient(directoryURL string) (AcmeClient, error) {
-	ns := &nonceStack{}
+func NewClient(directoryURL string, options ...AcmeOptionFunc) (AcmeClient, error) {
+	httpClient := http.DefaultClient
 
-	client := AcmeClient{
-		httpClient: &http.Client{
-			Timeout: time.Second * 30,
-		},
-		nonces: ns,
+	ns := &nonceStack{
+		client: httpClient,
 	}
 
-	if Debug {
-		client.httpClient.Transport = &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
+	acmeClient := AcmeClient{
+		httpClient: httpClient,
+		nonces:     ns,
+	}
+
+	for _, opt := range options {
+		if err := opt(acmeClient); err != nil {
+			return acmeClient, fmt.Errorf("acme: error setting option: %v", err)
 		}
 	}
 
-	if _, err := client.get(directoryURL, &client.Directory, http.StatusOK); err != nil {
-		return client, err
+	if _, err := acmeClient.get(directoryURL, &acmeClient.Directory, http.StatusOK); err != nil {
+		return acmeClient, err
 	}
 
-	client.Directory.Url = directoryURL
-	ns.newNonceURL = client.Directory.NewNonce
+	acmeClient.Directory.Url = directoryURL
+	ns.newNonceURL = acmeClient.Directory.NewNonce
 
-	return client, nil
+	return acmeClient, nil
 }
 
 // Helper function to get the poll interval and poll timeout, defaulting if 0
@@ -124,72 +120,20 @@ func (c AcmeClient) get(url string, out interface{}, expectedStatus ...int) (*ht
 	return resp, nil
 }
 
-// Encapsulates a payload into a JSON Web Signature
-// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-6.2
-func encapsulateJws(nonceSource jose.NonceSource, requestURL, keyID string, privateKey interface{}, payload interface{}) (*jose.JSONWebSignature, error) {
-	var keyAlgo jose.SignatureAlgorithm
-	switch k := privateKey.(type) {
-	case *rsa.PrivateKey:
-		keyAlgo = jose.RS256
-	case *ecdsa.PrivateKey:
-		switch k.Params().Name {
-		case "P-256":
-			keyAlgo = jose.ES256
-		case "P-384":
-			keyAlgo = jose.ES384
-		case "P-521":
-			keyAlgo = jose.ES512
-		default:
-			return nil, fmt.Errorf("acme: unsupported private key ecdsa params: %s", k.Params().Name)
-		}
-	default:
-		return nil, fmt.Errorf("acme: unsupported private key type: %v", k)
-	}
-
-	rawPayload, err := json.Marshal(payload)
-	if err != nil {
-		return nil, fmt.Errorf("acme: error marshalling payload: %v", err)
-	}
-
-	opts := jose.SignerOptions{}
-	if nonceSource != nil {
-		opts.NonceSource = nonceSource
-	}
-	opts.WithHeader("url", requestURL)
-	// jwk and kid fields are mutually exclusive
-	if keyID != "" {
-		opts.WithHeader("kid", keyID)
-	} else {
-		opts.EmbedJWK = true
-	}
-
-	sig := jose.SigningKey{
-		Key:       privateKey,
-		Algorithm: keyAlgo,
-	}
-
-	signer, err := jose.NewSigner(sig, &opts)
-	if err != nil {
-		return nil, fmt.Errorf("acme: error creating new signer: %v", err)
-	}
-
-	object, err := signer.Sign(rawPayload)
-	if err != nil {
-		return object, fmt.Errorf("acme: error signing payload: %v", err)
-	}
-
-	return object, nil
-}
-
 // Helper function to perform an http post request and read the body.
 // Will attempt to retry if error is badNonce
-func (c AcmeClient) postRaw(isRetry bool, requestURL, keyID string, privateKey interface{}, payload interface{}, out interface{}, expectedStatus []int) (*http.Response, []byte, error) {
-	object, err := encapsulateJws(c.nonces, requestURL, keyID, privateKey, payload)
+func (c AcmeClient) postRaw(isRetry bool, requestURL, keyID string, privateKey crypto.Signer, payload interface{}, out interface{}, expectedStatus []int) (*http.Response, []byte, error) {
+	nonce, err := c.nonces.Nonce()
 	if err != nil {
 		return nil, nil, err
 	}
 
-	req, err := http.NewRequest("POST", requestURL, strings.NewReader(object.FullSerialize()))
+	data, err := jwsEncodeJSON(payload, privateKey, requestURL, keyID, nonce)
+	if err != nil {
+		return nil, nil, fmt.Errorf("acme: error encoding json payload: %v", err)
+	}
+
+	req, err := http.NewRequest("POST", requestURL, bytes.NewReader(data))
 	if err != nil {
 		return nil, nil, fmt.Errorf("acme: error creating request: %v", err)
 	}
@@ -228,7 +172,7 @@ func (c AcmeClient) postRaw(isRetry bool, requestURL, keyID string, privateKey i
 }
 
 // Helper function for performing a http post to an acme resource.
-func (c AcmeClient) post(requestURL, keyID string, privateKey interface{}, payload interface{}, out interface{}, expectedStatus ...int) (*http.Response, error) {
+func (c AcmeClient) post(requestURL, keyID string, privateKey crypto.Signer, payload interface{}, out interface{}, expectedStatus ...int) (*http.Response, error) {
 	resp, body, err := c.postRaw(false, requestURL, keyID, privateKey, payload, out, expectedStatus)
 	if err != nil {
 		return resp, err

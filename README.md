@@ -15,4 +15,4 @@ This code demonstrates account registation, new order submission, fulfilling cha
 
 ## Tests
 
-The tests are designed to be run against a local instance of [boulder](https://github.com/letsencrypt/boulder) running the `config-next` configuration.
+The tests are designed to be run against a local instance of [boulder](https://github.com/letsencrypt/boulder) running the `config-next` configuration along with the FAKE_DNS variable set.

@@ -1,9 +1,14 @@
 package acme
 
-import "testing"
+import (
+	"net/http"
+	"testing"
+)
 
 func TestNonceStack_Nonce(t *testing.T) {
-	ns := nonceStack{}
+	ns := nonceStack{
+		client: http.DefaultClient,
+	}
 
 	ns.push("test")
 	if len(ns.stack) != 1 {

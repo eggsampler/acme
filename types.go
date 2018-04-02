@@ -1,19 +1,19 @@
 package acme
 
 import (
+	"crypto"
+	"errors"
 	"net/http"
 	"time"
 )
 
-// Turns on debug mode. Currently, debug mode is only for disabling TLS checks for the http client.
-var Debug = false
-
 // Different possible challenge types provided by an ACME server.
 var (
-	AcmeChallengeTypeDns01    = "dns-01"
-	AcmeChallengeTypeHttp01   = "http-01"
-	AcmeChallengeTypeTlsSni02 = "tls-sni-02"
+	AcmeChallengeTypeDns01  = "dns-01"
+	AcmeChallengeTypeHttp01 = "http-01"
 )
+
+var ErrUnsupportedKey = errors.New("acme: unknown key type; only RSA and ECDSA are supported")
 
 // Constants used for certificate revocation, used for RevokeCertificate
 // More details: https://tools.ietf.org/html/rfc5280#section-5.3.1
@@ -85,7 +85,7 @@ type AcmeAccount struct {
 
 	// The private key used to create or fetch the account.
 	// Not fetched from server.
-	PrivateKey interface{} `json:"-"`
+	PrivateKey crypto.Signer `json:"-"`
 
 	// SHA-256 digest JWK_Thumbprint of the account key.
 	// Used in updating challenges, see: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-8.1
