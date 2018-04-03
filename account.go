@@ -34,7 +34,7 @@ func (c AcmeClient) NewAccount(privateKey crypto.Signer, onlyReturnExisting, ter
 	if account.Thumbprint == "" {
 		account.Thumbprint, err = JWKThumbprint(account.PrivateKey.Public())
 		if err != nil {
-			return account, err
+			return account, fmt.Errorf("acme: error computing account thumbprint: %v", err)
 		}
 	}
 
@@ -66,7 +66,7 @@ func (c AcmeClient) UpdateAccount(account AcmeAccount, termsOfServiceAgreed bool
 	if account.Thumbprint == "" {
 		account.Thumbprint, err = JWKThumbprint(account.PrivateKey.Public())
 		if err != nil {
-			return account, err
+			return account, fmt.Errorf("acme: error computing account thumbprint: %v", err)
 		}
 	}
 

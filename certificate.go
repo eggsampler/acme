@@ -26,7 +26,7 @@ func (c AcmeClient) FetchCertificates(certificateURL string) ([]*x509.Certificat
 		}
 		cert, err := x509.ParseCertificate(p.Bytes)
 		if err != nil {
-			return certs, fmt.Errorf("acme: parsing certificate: %v", err)
+			return certs, fmt.Errorf("acme: error parsing certificate: %v", err)
 		}
 		certs = append(certs, cert)
 	}
