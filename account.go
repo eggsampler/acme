@@ -89,12 +89,7 @@ func (c AcmeClient) AccountKeyChange(account AcmeAccount, newPrivateKey crypto.S
 		NewKey:  []byte(newJwkKeyPub),
 	}
 
-	nonce, err := c.nonces.Nonce()
-	if err != nil {
-		return account, err
-	}
-
-	innerJws, err := jwsEncodeJSON(keyChangeReq, newPrivateKey, c.Directory.KeyChange, "", nonce)
+	innerJws, err := jwsEncodeJSON(keyChangeReq, newPrivateKey, c.Directory.KeyChange, "", "")
 	if err != nil {
 		return account, fmt.Errorf("acme: error encoding inner jws: %v", err)
 	}
