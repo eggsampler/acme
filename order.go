@@ -47,19 +47,41 @@ func (c AcmeClient) FetchOrder(orderURL string) (AcmeOrder, error) {
 }
 
 // Helper function to determine whether an order is "finished" by it's status.
-func checkOrderStatus(order AcmeOrder) (bool, error) {
+// More info: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.4
+func checkFinalizedOrderStatus(order AcmeOrder) (bool, error) {
 	switch order.Status {
 	case "invalid":
+		// "invalid": The certificate will not be issued.  Consider this
+		//      order process abandoned.
 		if order.Error.Type != "" {
 			return true, order.Error
 		}
 		return true, errors.New("acme: finalized order is invalid, no error provided")
+
 	case "pending":
+		// "pending": The server does not believe that the client has
+		//      fulfilled the requirements.  Check the "authorizations" array for
+		//      entries that are still pending.
 		return true, errors.New("acme: authorizations not fulfilled")
+
+	case "ready":
+		// "ready": The server agrees that the requirements have been
+		//      fulfilled, and is awaiting finalization.  Submit a finalization
+		//      request.
+		return true, errors.New("acme: unexpected 'ready' state")
+
 	case "processing":
+		// "processing": The certificate is being issued.  Send a GET request
+		//      after the time given in the "Retry-After" header field of the
+		//      response, if any.
 		return false, nil
+
 	case "valid":
+		// "valid": The server has issued the certificate and provisioned its
+		//      URL to the "certificate" field of the order.  Download the
+		//      certificate.
 		return true, nil
+
 	default:
 		return true, fmt.Errorf("acme: unknown order status: %s", order.Status)
 	}
@@ -68,6 +90,7 @@ func checkOrderStatus(order AcmeOrder) (bool, error) {
 // FinalizeOrder indicates to the acme server that the client considers an order complete and "finalizes" it.
 // If the server believes the authorizations have been filled successfully, a certificate should then be available.
 // More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.4
+// This function assumes that the order status is "ready".
 func (c AcmeClient) FinalizeOrder(account AcmeAccount, order AcmeOrder, csr *x509.CertificateRequest) (AcmeOrder, error) {
 	finaliseReq := struct {
 		Csr string `json:"csr"`
@@ -75,36 +98,35 @@ func (c AcmeClient) FinalizeOrder(account AcmeAccount, order AcmeOrder, csr *x50
 		Csr: base64.RawURLEncoding.EncodeToString(csr.Raw),
 	}
 
-	finalizeResp := AcmeOrder{}
-	resp, err := c.post(order.Finalize, account.Url, account.PrivateKey, finaliseReq, &finalizeResp, http.StatusOK)
+	resp, err := c.post(order.Finalize, account.Url, account.PrivateKey, finaliseReq, &order, http.StatusOK)
 	if err != nil {
-		return finalizeResp, err
+		return order, err
 	}
 
-	finalizeResp.Url = resp.Header.Get("Location")
+	order.Url = resp.Header.Get("Location")
 
-	if finished, err := checkOrderStatus(finalizeResp); finished {
-		return finalizeResp, err
+	if finished, err := checkFinalizedOrderStatus(order); finished {
+		return order, err
 	}
 
 	pollInterval, pollTimeout := c.getPollingDurations()
 	end := time.Now().Add(pollTimeout)
 	for {
 		if time.Now().After(end) {
-			return finalizeResp, errors.New("acme: finalized order timeout")
+			return order, errors.New("acme: finalized order timeout")
 		}
 		time.Sleep(pollInterval)
 
-		if _, err := c.get(finalizeResp.Url, &finalizeResp, http.StatusOK); err != nil {
+		if _, err := c.get(order.Url, &order, http.StatusOK); err != nil {
 			// i dont think it's worth exiting the loop on this error
 			// it could just be connectivity issue thats resolved before the timeout duration
 			continue
 		}
 
-		finalizeResp.Url = resp.Header.Get("Location")
+		order.Url = resp.Header.Get("Location")
 
-		if finished, err := checkOrderStatus(finalizeResp); finished {
-			return finalizeResp, err
+		if finished, err := checkFinalizedOrderStatus(order); finished {
+			return order, err
 		}
 	}
 }

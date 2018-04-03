@@ -18,17 +18,30 @@ func EncodeDNS01KeyAuthorization(keyAuth string) string {
 }
 
 // Helper function to determine whether a challenge is "finished" by it's status.
-func checkChallengeStatus(challenge AcmeChallenge) (bool, error) {
+func checkUpdatedChallengeStatus(challenge AcmeChallenge) (bool, error) {
 	switch challenge.Status {
+	case "pending":
+		// Challenge objects are created in the "pending" state.
+		// TODO: https://github.com/letsencrypt/boulder/issues/3346
+		// return true, errors.New("acme: unexpected 'pending' challenge state")
+		return false, nil
+
+	case "processing":
+		// They transition to the "processing" state when the client responds to the
+		//   challenge and the server begins attempting to validate that the client has completed the challenge.
+		return false, nil
+
 	case "valid":
+		// If validation is successful, the challenge moves to the "valid" state
 		return true, nil
+
 	case "invalid":
+		// if there is an error, the challenge moves to the "invalid" state.
 		if challenge.Error.Type != "" {
 			return true, challenge.Error
 		}
 		return true, errors.New("acme: challenge is invalid, no error provided")
-	case "pending":
-		return false, nil
+
 	default:
 		return true, fmt.Errorf("acme: unknown challenge status: %s", challenge.Status)
 	}
@@ -51,7 +64,7 @@ func (c AcmeClient) UpdateChallenge(account AcmeAccount, challenge AcmeChallenge
 	challenge.Url = resp.Header.Get("Location")
 	challenge.AuthorizationUrl = fetchLink(resp, "up")
 
-	if finished, err := checkChallengeStatus(challenge); finished {
+	if finished, err := checkUpdatedChallengeStatus(challenge); finished {
 		return challenge, err
 	}
 
@@ -73,7 +86,7 @@ func (c AcmeClient) UpdateChallenge(account AcmeAccount, challenge AcmeChallenge
 		challenge.Url = resp.Header.Get("Location")
 		challenge.AuthorizationUrl = fetchLink(resp, "up")
 
-		if finished, err := checkChallengeStatus(challenge); finished {
+		if finished, err := checkUpdatedChallengeStatus(challenge); finished {
 			return challenge, err
 		}
 	}
