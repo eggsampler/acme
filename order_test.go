@@ -125,15 +125,23 @@ func makeOrderFinal(t *testing.T, domains []string) (AcmeAccount, AcmeOrder, cry
 
 	updateChalHttp(t, account, chal)
 
-	order, err := testClient.FinalizeOrder(account, order, csr)
+	updatedOrder, err := testClient.FetchOrder(order.Url)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if order.Status != "valid" {
+	if updatedOrder.Status != "ready" {
+		t.Fatal("order not ready")
+	}
+
+	finalizedOrder, err := testClient.FinalizeOrder(account, order, csr)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if finalizedOrder.Status != "valid" {
 		t.Fatal("order not valid")
 	}
 
-	return account, order, privKey
+	return account, finalizedOrder, privKey
 }
 
 func TestAcmeClient_FinalizeOrder(t *testing.T) {
