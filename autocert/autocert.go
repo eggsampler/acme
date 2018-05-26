@@ -1,4 +1,4 @@
-package acme
+package autocert
 
 // Similar to golang.org/x/crypto/acme/autocert
 
@@ -17,12 +17,14 @@ import (
 	"path"
 	"strings"
 	"sync"
+
+	"github.com/eggsampler/acme"
 )
 
-// Function prototype to implement for checking hosts against before issuing certificates
+// HostCheck function prototype to implement for checking hosts against before issuing certificates
 type HostCheck func(host string) error
 
-// Simple whitelist HostCheck
+// WhitelistHosts implememts a simple whitelist HostCheck
 func WhitelistHosts(hosts ...string) HostCheck {
 	m := map[string]bool{}
 	for _, v := range hosts {
@@ -37,9 +39,9 @@ func WhitelistHosts(hosts ...string) HostCheck {
 	}
 }
 
-// Stateful certificate manager for issuing certificates on connecting hosts
+// AutoCert is a stateful certificate manager for issuing certificates on connecting hosts
 type AutoCert struct {
-	// Acme directory URL
+	// Acme directory Url
 	// If nil, uses `acme.LETSENCRYPT_STAGING`
 	DirectoryUrl string
 
@@ -68,10 +70,10 @@ type AutoCert struct {
 	// write lock around issuing new certificate
 	certLock sync.RWMutex
 
-	client AcmeClient
+	client acme.AcmeClient
 }
 
-// Wraps a handler and provides serving of http-01 challenge tokens from /.well-known/acme-challenge/
+// HTTPHandler Wraps a handler and provides serving of http-01 challenge tokens from /.well-known/acme-challenge/
 // If handler is nil, will redirect all traffic otherwise to https
 func (m *AutoCert) HTTPHandler(handler http.Handler) http.Handler {
 	if handler == nil {
@@ -137,12 +139,12 @@ func (m *AutoCert) GetCertificate(hello *tls.ClientHelloInfo) (*tls.Certificate,
 	return m.issueCert(name)
 }
 
-func (m AutoCert) getDirectoryUrl() string {
+func (m *AutoCert) getDirectoryUrl() string {
 	if m.DirectoryUrl != "" {
 		return m.DirectoryUrl
 	}
 
-	return LETSENCRYPT_STAGING
+	return acme.LETSENCRYPT_STAGING
 }
 
 func (m *AutoCert) getCache(keys ...string) []byte {
@@ -188,7 +190,7 @@ func (m *AutoCert) putCache(data []byte, keys ...string) {
 	}
 }
 
-func (m AutoCert) checkHost(name string) error {
+func (m *AutoCert) checkHost(name string) error {
 	if m.HostCheck == nil {
 		return nil
 	}
@@ -299,7 +301,7 @@ func (m *AutoCert) issueCert(domainName string) (*tls.Certificate, error) {
 	// create a new client if one doesn't exist
 	if m.client.Directory.Url == "" {
 		var err error
-		m.client, err = NewClient(m.getDirectoryUrl())
+		m.client, err = acme.NewClient(m.getDirectoryUrl())
 		if err != nil {
 			return nil, err
 		}
@@ -317,16 +319,16 @@ func (m *AutoCert) issueCert(domainName string) (*tls.Certificate, error) {
 		return nil, fmt.Errorf("autocert: error creating new order for domain %s: %v", domainName, err)
 	}
 
-	// loop through each of the provided authorization urls
+	// loop through each of the provided authorization Urls
 	for _, authUrl := range order.Authorizations {
 		auth, err := m.client.FetchAuthorization(account, authUrl)
 		if err != nil {
-			return nil, fmt.Errorf("autocert: error fetching authorization url %q: %v", authUrl, err)
+			return nil, fmt.Errorf("autocert: error fetching authorization Url %q: %v", authUrl, err)
 		}
 
-		chal, ok := auth.ChallengeMap[AcmeChallengeTypeHttp01]
+		chal, ok := auth.ChallengeMap[acme.AcmeChallengeTypeHttp01]
 		if !ok {
-			return nil, fmt.Errorf("autocert: unable to find http-01 challenge for auth %s, url: %s", auth.Identifier.Value, authUrl)
+			return nil, fmt.Errorf("autocert: unable to find http-01 challenge for auth %s, Url: %s", auth.Identifier.Value, authUrl)
 		}
 
 		m.tokensLock.Lock()
@@ -338,7 +340,7 @@ func (m *AutoCert) issueCert(domainName string) (*tls.Certificate, error) {
 
 		chal, err = m.client.UpdateChallenge(account, chal)
 		if err != nil {
-			return nil, fmt.Errorf("autocert: error updating authorization %s challenge (url: %s) : %v", auth.Identifier.Value, authUrl, err)
+			return nil, fmt.Errorf("autocert: error updating authorization %s challenge (Url: %s) : %v", auth.Identifier.Value, authUrl, err)
 		}
 
 		m.tokensLock.Lock()
@@ -400,9 +402,5 @@ func (m *AutoCert) issueCert(domainName string) (*tls.Certificate, error) {
 	}
 	m.putCache(certPem, "cert", domainName)
 
-	return &tls.Certificate{
-		Certificate: certDer,
-		PrivateKey:  privKey,
-		Leaf:        certs[0],
-	}, nil
+	return m.getExistingCert(domainName), nil
 }
