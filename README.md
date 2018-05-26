@@ -10,8 +10,10 @@ The library is designed to provide a wrapper over exposed directory endpoints an
 
 ## Example
 
-A simple [certbot](https://certbot.eff.org/)-like example is provided in the example directory.
+A simple [certbot](https://certbot.eff.org/)-like example is provided in the examples/certbot directory.
 This code demonstrates account registation, new order submission, fulfilling challenges, finalising an order and fetching the issued certificate chain.
+
+An example of how to use the autocert package is also provided in examples/autocert.
 
 ## Tests
 
