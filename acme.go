@@ -16,6 +16,12 @@ import (
 )
 
 const (
+	// Let's Encrypt production directory url
+	LETSENCRYPT_PRODUCTION = "https://acme-v02.api.letsencrypt.org/directory"
+
+	// Let's Encrypt staging directory url
+	LETSENCRYPT_STAGING = "https://acme-staging-v02.api.letsencrypt.org/directory"
+
 	userAgentString = "eggsampler-acme/1.0 Go-http-client/1.1"
 )
 

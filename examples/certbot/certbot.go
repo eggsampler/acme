@@ -1,4 +1,4 @@
-package main
+package certbot
 
 // An example of the acme library to create a simple certbot-like clone. Takes a few command line parameters and issues
 // a certificate using the http-01 challenge method.
@@ -41,7 +41,7 @@ type acmeAccountFile struct {
 }
 
 func main() {
-	flag.StringVar(&directoryUrl, "dirurl", "https://acme-staging-v02.api.letsencrypt.org/directory",
+	flag.StringVar(&directoryUrl, "dirurl", acme.LETSENCRYPT_STAGING,
 		"acme directory url - defaults to lets encrypt v2 staging url if not provided")
 	flag.StringVar(&contactsList, "contact", "",
 		"a list of comma separated contact emails to use when creating a new account (optional, dont include 'mailto:' prefix)")

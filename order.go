@@ -33,6 +33,21 @@ func (c AcmeClient) NewOrder(account AcmeAccount, identifiers []AcmeIdentifier) 
 	return newOrderResp, nil
 }
 
+// Wrapper for NewOrder(AcmeAccount, []AcmeIdentifiers)
+// Creates a dns identifier for each provided domain
+func (c AcmeClient) NewOrderDomains(account AcmeAccount, domains ...string) (AcmeOrder, error) {
+	if len(domains) == 0 {
+		return AcmeOrder{}, errors.New("acme: no domains provided")
+	}
+
+	var ids []AcmeIdentifier
+	for _, d := range domains {
+		ids = append(ids, AcmeIdentifier{Type: "dns", Value: d})
+	}
+
+	return c.NewOrder(account, ids)
+}
+
 // FetchOrder fetches an existing order given an order url.
 func (c AcmeClient) FetchOrder(orderURL string) (AcmeOrder, error) {
 	orderResp := AcmeOrder{
