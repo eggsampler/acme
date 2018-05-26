@@ -13,9 +13,12 @@ import (
 	_ "crypto/sha512" // need for EC keys
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 )
+
+var errUnsupportedKey = errors.New("acme: unknown key type; only RSA and ECDSA are supported")
 
 // jwsEncodeJSON signs claimset using provided key and a nonce.
 // The result is serialized in JSON format.
@@ -27,7 +30,7 @@ func jwsEncodeJSON(claimset interface{}, key crypto.Signer, requestURL, keyID, n
 	}
 	alg, sha := jwsHasher(key)
 	if alg == "" || !sha.Available() {
-		return nil, ErrUnsupportedKey
+		return nil, errUnsupportedKey
 	}
 	var phead string
 	if keyID != "" {
@@ -98,7 +101,7 @@ func jwkEncode(pub crypto.PublicKey) (string, error) {
 			base64.RawURLEncoding.EncodeToString(y),
 		), nil
 	}
-	return "", ErrUnsupportedKey
+	return "", errUnsupportedKey
 }
 
 // jwsSign signs the digest using the given key.
@@ -123,7 +126,7 @@ func jwsSign(key crypto.Signer, hash crypto.Hash, digest []byte) ([]byte, error)
 		copy(sig[size*2-len(sb):], sb)
 		return sig, nil
 	}
-	return nil, ErrUnsupportedKey
+	return nil, errUnsupportedKey
 }
 
 // jwsHasher indicates suitable JWS algorithm name and a hash function

@@ -7,22 +7,23 @@ import (
 	"net/http"
 )
 
-// AcmeError represents an error returned by an acme server.
+// Problem represents an error returned by an acme server.
 // More details: https://tools.ietf.org/html/rfc7807
-type AcmeError struct {
-	Status      int    `json:"status"`
+type Problem struct {
+	Status int `json:"status"`
+
 	Type        string `json:"type"`
 	Detail      string `json:"detail"`
 	Instance    string `json:"instance"`
 	SubProblems []struct {
 		Type       string `json:"type"`
 		Detail     string `json:"detail"`
-		Identifier AcmeIdentifier
+		Identifier Identifier
 	} `json:"subproblems"`
 }
 
 // Returns a human readable error string.
-func (err AcmeError) Error() string {
+func (err Problem) Error() string {
 	s := fmt.Sprintf("acme: error code %d %q: %s", err.Status, err.Type, err.Detail)
 	if len(err.SubProblems) > 0 {
 		for _, v := range err.SubProblems {
@@ -52,7 +53,7 @@ func checkError(resp *http.Response, expectedStatuses ...int) error {
 		return fmt.Errorf("acme: error reading error body: %v", err)
 	}
 
-	acmeError := AcmeError{}
+	acmeError := Problem{}
 	if err := json.Unmarshal(body, &acmeError); err != nil {
 		return fmt.Errorf("acme: parsing error body: %v - %s", err, string(body))
 	}

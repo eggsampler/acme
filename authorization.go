@@ -4,8 +4,8 @@ import "net/http"
 
 // FetchAuthorization fetches an authorization from an authorization url provided in an order.
 // More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.5
-func (c AcmeClient) FetchAuthorization(account AcmeAccount, authURL string) (AcmeAuthorization, error) {
-	authResp := AcmeAuthorization{}
+func (c Client) FetchAuthorization(account Account, authURL string) (Authorization, error) {
+	authResp := Authorization{}
 	_, err := c.get(authURL, &authResp, http.StatusOK)
 	if err != nil {
 		return authResp, err
@@ -17,7 +17,7 @@ func (c AcmeClient) FetchAuthorization(account AcmeAccount, authURL string) (Acm
 		}
 	}
 
-	authResp.ChallengeMap = map[string]AcmeChallenge{}
+	authResp.ChallengeMap = map[string]Challenge{}
 	authResp.ChallengeTypes = []string{}
 	for _, c := range authResp.Challenges {
 		authResp.ChallengeMap[c.Type] = c
@@ -29,15 +29,15 @@ func (c AcmeClient) FetchAuthorization(account AcmeAccount, authURL string) (Acm
 
 // DeactivateAuthorization deactivate a provided authorization url from an order.
 // More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.5.2
-func (c AcmeClient) DeactivateAuthorization(account AcmeAccount, authURL string) (AcmeAuthorization, error) {
+func (c Client) DeactivateAuthorization(account Account, authURL string) (Authorization, error) {
 	deactivateReq := struct {
 		Status string `json:"status"`
 	}{
 		Status: "deactivated",
 	}
-	deactivateResp := AcmeAuthorization{}
+	deactivateResp := Authorization{}
 
-	if _, err := c.post(authURL, account.Url, account.PrivateKey, deactivateReq, &deactivateResp, http.StatusOK); err != nil {
+	if _, err := c.post(authURL, account.URL, account.PrivateKey, deactivateReq, &deactivateResp, http.StatusOK); err != nil {
 		return deactivateResp, err
 	}
 

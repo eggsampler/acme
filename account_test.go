@@ -48,7 +48,7 @@ func TestAcmeClient_NewAccount(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error %s, got none", currentTest.Name)
 		}
-		acmeErr, ok := err.(AcmeError)
+		acmeErr, ok := err.(Problem)
 		if !ok {
 			t.Fatalf("unknown error %s: %v", currentTest.Name, err)
 		}

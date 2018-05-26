@@ -7,9 +7,9 @@ import (
 )
 
 func TestWithHttpTimeout(t *testing.T) {
-	acmeClient := AcmeClient{httpClient: http.DefaultClient}
+	acmeClient := Client{httpClient: http.DefaultClient}
 	timeout := 30 * time.Second
-	opt := WithHttpTimeout(timeout)
+	opt := WithHTTPTimeout(timeout)
 	if err := opt(acmeClient); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -19,7 +19,7 @@ func TestWithHttpTimeout(t *testing.T) {
 }
 
 func TestWithInsecureSkipVerify(t *testing.T) {
-	acmeClient := AcmeClient{httpClient: http.DefaultClient}
+	acmeClient := Client{httpClient: http.DefaultClient}
 	opt := WithInsecureSkipVerify()
 	if err := opt(acmeClient); err != nil {
 		t.Fatalf("unexpected error: %v", err)

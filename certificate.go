@@ -11,7 +11,7 @@ import (
 
 // FetchCertificates downloads a certificate chain from a url given in an order certificate.
 // More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.4.2
-func (c AcmeClient) FetchCertificates(certificateURL string) ([]*x509.Certificate, error) {
+func (c Client) FetchCertificates(certificateURL string) ([]*x509.Certificate, error) {
 	resp, raw, err := c.getRaw(certificateURL, http.StatusOK)
 	if err != nil {
 		return nil, err
@@ -47,7 +47,7 @@ func (c AcmeClient) FetchCertificates(certificateURL string) ([]*x509.Certificat
 
 // RevokeCertificate revokes a given certificate given the certificate key or account key, and a reason.
 // More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.6
-func (c AcmeClient) RevokeCertificate(account AcmeAccount, cert *x509.Certificate, key crypto.Signer, reason int) error {
+func (c Client) RevokeCertificate(account Account, cert *x509.Certificate, key crypto.Signer, reason int) error {
 	revokeReq := struct {
 		Certificate string `json:"certificate"`
 		Reason      int    `json:"reason"`
@@ -58,7 +58,7 @@ func (c AcmeClient) RevokeCertificate(account AcmeAccount, cert *x509.Certificat
 
 	kid := ""
 	if key == account.PrivateKey {
-		kid = account.Url
+		kid = account.URL
 	}
 
 	if _, err := c.post(c.Directory.RevokeCert, kid, key, revokeReq, nil, http.StatusOK); err != nil {

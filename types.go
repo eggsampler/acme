@@ -2,18 +2,15 @@ package acme
 
 import (
 	"crypto"
-	"errors"
 	"net/http"
 	"time"
 )
 
 // Different possible challenge types provided by an ACME server.
 var (
-	AcmeChallengeTypeDns01  = "dns-01"
-	AcmeChallengeTypeHttp01 = "http-01"
+	AcmeChallengeTypeDNS01  = "dns-01"
+	AcmeChallengeTypeHTTP01 = "http-01"
 )
-
-var ErrUnsupportedKey = errors.New("acme: unknown key type; only RSA and ECDSA are supported")
 
 // Constants used for certificate revocation, used for RevokeCertificate
 // More details: https://tools.ietf.org/html/rfc5280#section-5.3.1
@@ -31,9 +28,9 @@ const (
 	ReasonAaCompromise                // 10
 )
 
-// A directory object as returned from the client's directory url upon creation of client.
+// Directory object as returned from the client's directory url upon creation of client.
 // More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.1.1
-type AcmeDirectory struct {
+type Directory struct {
 	NewNonce   string `json:"newNonce"`   // url to new nonce endpoint
 	NewAccount string `json:"newAccount"` // url to new account endpoint
 	NewOrder   string `json:"newOrder"`   // url to new order endpoint
@@ -51,17 +48,17 @@ type AcmeDirectory struct {
 	} `json:"meta"`
 
 	// Directory url provided when creating a new acme client.
-	Url string `json:"-"`
+	URL string `json:"-"`
 }
 
-// A client structure to interact with an ACME server.
+// Client structure to interact with an ACME server.
 // This is typically how most, if not all, of the communication between the client and server occurs.
-type AcmeClient struct {
+type Client struct {
 	httpClient *http.Client
 	nonces     *nonceStack
 
 	// The directory object returned by the client connecting to a directory url.
-	Directory AcmeDirectory
+	Directory Directory
 
 	// The amount of total time the AcmeClient will wait at most for a challenge to be updated or a certificate to be issued.
 	// Default 30 seconds if duration is not set or if set to 0.
@@ -72,16 +69,16 @@ type AcmeClient struct {
 	PollInterval time.Duration
 }
 
-// A structure representing fields in an account object.
+// Account structure representing fields in an account object.
 // More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.1.2
-type AcmeAccount struct {
+type Account struct {
 	Status               string   `json:"status"`
 	Contact              []string `json:"contact"`
 	TermsOfServiceAgreed bool     `json:"onlyReturnExisting"`
 	Orders               string   `json:"orders"`
 
 	// Provided by the Location http header when creating a new account or fetching an existing account.
-	Url string `json:"-"`
+	URL string `json:"-"`
 
 	// The private key used to create or fetch the account.
 	// Not fetched from server.
@@ -92,60 +89,60 @@ type AcmeAccount struct {
 	Thumbprint string `json:"-"`
 }
 
-// An identifier object used in order and authorization objects
+// Identifier object used in order and authorization objects
 // More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.1.3
-type AcmeIdentifier struct {
+type Identifier struct {
 	Type  string `json:"type"`
 	Value string `json:"value"`
 }
 
-// An order object, returned when fetching or creating a new order.
+// Order object returned when fetching or creating a new order.
 // More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.1.3
-type AcmeOrder struct {
-	Status         string           `json:"status"`
-	Expires        time.Time        `json:"expires"`
-	Identifiers    []AcmeIdentifier `json:"identifiers"`
-	Authorizations []string         `json:"authorizations"`
-	Error          AcmeError        `json:"error"`
-	Finalize       string           `json:"finalize"`
-	Certificate    string           `json:"certificate"`
+type Order struct {
+	Status         string       `json:"status"`
+	Expires        time.Time    `json:"expires"`
+	Identifiers    []Identifier `json:"identifiers"`
+	Authorizations []string     `json:"authorizations"`
+	Error          Problem      `json:"error"`
+	Finalize       string       `json:"finalize"`
+	Certificate    string       `json:"certificate"`
 
-	// Url for the order object.
+	// URL for the order object.
 	// Provided by the rel="Location" Link http header
-	Url string `json:"-"`
+	URL string `json:"-"`
 }
 
-// An authorization object returned when fetching an authorization in an order.
+// Authorization object returned when fetching an authorization in an order.
 // More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.1.4
-type AcmeAuthorization struct {
-	Identifier AcmeIdentifier  `json:"identifier"`
-	Status     string          `json:"status"`
-	Expires    time.Time       `json:"expires"`
-	Challenges []AcmeChallenge `json:"challenges"`
-	Wildcard   bool            `json:"wildcard"`
+type Authorization struct {
+	Identifier Identifier  `json:"identifier"`
+	Status     string      `json:"status"`
+	Expires    time.Time   `json:"expires"`
+	Challenges []Challenge `json:"challenges"`
+	Wildcard   bool        `json:"wildcard"`
 
 	// For convenience access to the provided challenges
-	ChallengeMap   map[string]AcmeChallenge `json:"-"`
-	ChallengeTypes []string                 `json:"-"`
+	ChallengeMap   map[string]Challenge `json:"-"`
+	ChallengeTypes []string             `json:"-"`
 }
 
-// A challenge object fetched in an authorization or directly from the challenge url.
+// Challenge object fetched in an authorization or directly from the challenge url.
 // More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-8
-type AcmeChallenge struct {
-	Type             string    `json:"type"`
-	Status           string    `json:"status"`
-	Url              string    `json:"url"`
-	Token            string    `json:"token"`
-	Error            AcmeError `json:"error"`
-	KeyAuthorization string    `json:"keyAuthorization"`
+type Challenge struct {
+	Type             string  `json:"type"`
+	Status           string  `json:"status"`
+	URL              string  `json:"url"`
+	Token            string  `json:"token"`
+	Error            Problem `json:"error"`
+	KeyAuthorization string  `json:"keyAuthorization"`
 
 	// Authorization url provided by the rel="up" Link http header
-	AuthorizationUrl string `json:"-"`
+	AuthorizationURL string `json:"-"`
 }
 
-// An orders list challenge object.
+// OrderList of challenge objects.
 // More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.1.2.1
-type AcmeOrderList struct {
+type OrderList struct {
 	Orders []string `json:"orders"`
 
 	// Order list pagination, url to next orders.

@@ -16,25 +16,25 @@ import (
 )
 
 const (
-	// Let's Encrypt production directory url
-	LETSENCRYPT_PRODUCTION = "https://acme-v02.api.letsencrypt.org/directory"
+	// LetsEncryptProduction holds the production directory url
+	LetsEncryptProduction = "https://acme-v02.api.letsencrypt.org/directory"
 
-	// Let's Encrypt staging directory url
-	LETSENCRYPT_STAGING = "https://acme-staging-v02.api.letsencrypt.org/directory"
+	// LetsEncryptStaging holds the staging directory url
+	LetsEncryptStaging = "https://acme-staging-v02.api.letsencrypt.org/directory"
 
 	userAgentString = "eggsampler-acme/1.0 Go-http-client/1.1"
 )
 
 // NewClient creates a new acme client given a valid directory url.
 // More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.1.1
-func NewClient(directoryURL string, options ...AcmeOptionFunc) (AcmeClient, error) {
+func NewClient(directoryURL string, options ...OptionFunc) (Client, error) {
 	httpClient := http.DefaultClient
 
 	ns := &nonceStack{
 		client: httpClient,
 	}
 
-	acmeClient := AcmeClient{
+	acmeClient := Client{
 		httpClient: httpClient,
 		nonces:     ns,
 	}
@@ -49,14 +49,14 @@ func NewClient(directoryURL string, options ...AcmeOptionFunc) (AcmeClient, erro
 		return acmeClient, err
 	}
 
-	acmeClient.Directory.Url = directoryURL
+	acmeClient.Directory.URL = directoryURL
 	ns.newNonceURL = acmeClient.Directory.NewNonce
 
 	return acmeClient, nil
 }
 
 // Helper function to get the poll interval and poll timeout, defaulting if 0
-func (c AcmeClient) getPollingDurations() (time.Duration, time.Duration) {
+func (c Client) getPollingDurations() (time.Duration, time.Duration) {
 	pollInterval := c.PollInterval
 	if pollInterval == 0 {
 		pollInterval = 500 * time.Millisecond
@@ -70,7 +70,7 @@ func (c AcmeClient) getPollingDurations() (time.Duration, time.Duration) {
 
 // Helper function to have a central point for performing http requests.
 // Stores any returned nonces in the stack.
-func (c AcmeClient) do(req *http.Request) (*http.Response, error) {
+func (c Client) do(req *http.Request) (*http.Response, error) {
 	// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-6.1
 	// identifier for this client, as well as the default go user agent
 	req.Header.Set("User-Agent", userAgentString)
@@ -86,7 +86,7 @@ func (c AcmeClient) do(req *http.Request) (*http.Response, error) {
 }
 
 // Helper function to perform an http get request and read the body.
-func (c AcmeClient) getRaw(url string, expectedStatus ...int) (*http.Response, []byte, error) {
+func (c Client) getRaw(url string, expectedStatus ...int) (*http.Response, []byte, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, nil, fmt.Errorf("acme: error creating request: %v", err)
@@ -111,7 +111,7 @@ func (c AcmeClient) getRaw(url string, expectedStatus ...int) (*http.Response, [
 }
 
 // Helper function for performing a http get on an acme resource.
-func (c AcmeClient) get(url string, out interface{}, expectedStatus ...int) (*http.Response, error) {
+func (c Client) get(url string, out interface{}, expectedStatus ...int) (*http.Response, error) {
 	resp, body, err := c.getRaw(url, expectedStatus...)
 	if err != nil {
 		return resp, err
@@ -128,7 +128,7 @@ func (c AcmeClient) get(url string, out interface{}, expectedStatus ...int) (*ht
 
 // Helper function to perform an http post request and read the body.
 // Will attempt to retry if error is badNonce
-func (c AcmeClient) postRaw(isRetry bool, requestURL, keyID string, privateKey crypto.Signer, payload interface{}, out interface{}, expectedStatus []int) (*http.Response, []byte, error) {
+func (c Client) postRaw(isRetry bool, requestURL, keyID string, privateKey crypto.Signer, payload interface{}, out interface{}, expectedStatus []int) (*http.Response, []byte, error) {
 	nonce, err := c.nonces.Nonce()
 	if err != nil {
 		return nil, nil, err
@@ -156,7 +156,7 @@ func (c AcmeClient) postRaw(isRetry bool, requestURL, keyID string, privateKey c
 			// don't attempt to retry if this attempt is the retry
 			return resp, nil, err
 		}
-		acmeErr, ok := err.(AcmeError)
+		acmeErr, ok := err.(Problem)
 		if !ok {
 			// don't retry for an error we don't know about
 			return resp, nil, err
@@ -178,7 +178,7 @@ func (c AcmeClient) postRaw(isRetry bool, requestURL, keyID string, privateKey c
 }
 
 // Helper function for performing a http post to an acme resource.
-func (c AcmeClient) post(requestURL, keyID string, privateKey crypto.Signer, payload interface{}, out interface{}, expectedStatus ...int) (*http.Response, error) {
+func (c Client) post(requestURL, keyID string, privateKey crypto.Signer, payload interface{}, out interface{}, expectedStatus ...int) (*http.Response, error) {
 	resp, body, err := c.postRaw(false, requestURL, keyID, privateKey, payload, out, expectedStatus)
 	if err != nil {
 		return resp, err

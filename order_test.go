@@ -22,7 +22,7 @@ func TestAcmeClient_NewOrder(t *testing.T) {
 		t.Fatalf("unexpected error making account: %v", err)
 	}
 
-	identifiers := []AcmeIdentifier{{"dns", randString() + ".com"}}
+	identifiers := []Identifier{{"dns", randString() + ".com"}}
 	order, err := testClient.NewOrder(account, identifiers)
 	if err != nil {
 		t.Fatalf("unexpected error making order: %v", err)
@@ -31,17 +31,17 @@ func TestAcmeClient_NewOrder(t *testing.T) {
 		t.Fatalf("order identifiers mismatch, identifiers: %+v, order identifiers: %+v", identifiers, order.Identifiers)
 	}
 
-	badIdentifiers := []AcmeIdentifier{{"bad", randString() + ".com"}}
+	badIdentifiers := []Identifier{{"bad", randString() + ".com"}}
 	_, err = testClient.NewOrder(account, badIdentifiers)
 	if err == nil {
 		t.Fatal("expected error, got none")
 	}
-	if _, ok := err.(AcmeError); !ok {
+	if _, ok := err.(Problem); !ok {
 		t.Fatalf("expected AcmeError, got: %v - %v", reflect.TypeOf(err), err)
 	}
 }
 
-func makeOrder(t *testing.T, identifiers []AcmeIdentifier) (AcmeAccount, AcmeOrder) {
+func makeOrder(t *testing.T, identifiers []Identifier) (Account, Order) {
 	key := makePrivateKey(t)
 	account, err := testClient.NewAccount(key, false, true)
 	if err != nil {
@@ -61,13 +61,13 @@ func makeOrder(t *testing.T, identifiers []AcmeIdentifier) (AcmeAccount, AcmeOrd
 }
 
 func TestAcmeClient_FetchOrder(t *testing.T) {
-	if _, err := testClient.FetchOrder(testDirectoryUrl + "/asdasdasd"); err == nil {
+	if _, err := testClient.FetchOrder(testDirectoryURL + "/asdasdasd"); err == nil {
 		t.Fatal("expected error, got none")
 	}
 
-	_, order := makeOrder(t, []AcmeIdentifier{{"dns", randString() + ".com"}})
+	_, order := makeOrder(t, []Identifier{{"dns", randString() + ".com"}})
 
-	fetchedOrder, err := testClient.FetchOrder(order.Url)
+	fetchedOrder, err := testClient.FetchOrder(order.URL)
 	if err != nil {
 		t.Fatalf("unexpected error fetching order: %v", err)
 	}
@@ -110,22 +110,22 @@ func newCSR(t *testing.T, domains []string) (*x509.CertificateRequest, crypto.Si
 	return csr, privKey
 }
 
-func makeOrderFinal(t *testing.T, domains []string) (AcmeAccount, AcmeOrder, crypto.Signer) {
+func makeOrderFinal(t *testing.T, domains []string) (Account, Order, crypto.Signer) {
 	csr, privKey := newCSR(t, domains)
 
-	var identifiers []AcmeIdentifier
+	var identifiers []Identifier
 	for _, s := range domains {
-		identifiers = append(identifiers, AcmeIdentifier{"dns", s})
+		identifiers = append(identifiers, Identifier{"dns", s})
 	}
 
-	account, order, chal := makeChal(t, identifiers, AcmeChallengeTypeHttp01)
+	account, order, chal := makeChal(t, identifiers, AcmeChallengeTypeHTTP01)
 	if order.Status != "pending" {
 		t.Fatalf("expected pending order status, got: %s", order.Status)
 	}
 
-	updateChalHttp(t, account, chal)
+	updateChalHTTP(t, account, chal)
 
-	updatedOrder, err := testClient.FetchOrder(order.Url)
+	updatedOrder, err := testClient.FetchOrder(order.URL)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -152,19 +152,19 @@ func TestWildcard(t *testing.T) {
 	// this test uses the fake dns resolver in the boulder docker-compose setup
 	randomDomain := randString() + ".com"
 	domains := []string{randomDomain, "*." + randomDomain}
-	var identifiers []AcmeIdentifier
+	var identifiers []Identifier
 	for _, d := range domains {
-		identifiers = append(identifiers, AcmeIdentifier{"dns", d})
+		identifiers = append(identifiers, Identifier{"dns", d})
 	}
 	account, order := makeOrder(t, identifiers)
 
-	for _, authUrl := range order.Authorizations {
-		currentAuth, err := testClient.FetchAuthorization(account, authUrl)
+	for _, authURL := range order.Authorizations {
+		currentAuth, err := testClient.FetchAuthorization(account, authURL)
 		if err != nil {
 			t.Fatalf("fetching auth: %v", err)
 		}
 
-		chal, ok := currentAuth.ChallengeMap[AcmeChallengeTypeDns01]
+		chal, ok := currentAuth.ChallengeMap[AcmeChallengeTypeDNS01]
 		if !ok {
 			t.Fatal("no dns challenge provided")
 		}

@@ -316,7 +316,7 @@ func TestJWKThumbprintEC(t *testing.T) {
 
 func TestJWKThumbprintErrUnsupportedKey(t *testing.T) {
 	_, err := JWKThumbprint(struct{}{})
-	if err != ErrUnsupportedKey {
-		t.Errorf("err = %q; want %q", err, ErrUnsupportedKey)
+	if err != errUnsupportedKey {
+		t.Errorf("err = %q; want %q", err, errUnsupportedKey)
 	}
 }

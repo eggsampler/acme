@@ -41,7 +41,7 @@ type acmeAccountFile struct {
 }
 
 func main() {
-	flag.StringVar(&directoryUrl, "dirurl", acme.LETSENCRYPT_STAGING,
+	flag.StringVar(&directoryUrl, "dirurl", acme.LetsEncryptStaging,
 		"acme directory url - defaults to lets encrypt v2 staging url if not provided")
 	flag.StringVar(&contactsList, "contact", "",
 		"a list of comma separated contact emails to use when creating a new account (optional, dont include 'mailto:' prefix)")
@@ -85,7 +85,7 @@ func main() {
 			log.Fatalf("Error creaing new account: %v", err)
 		}
 	}
-	log.Printf("Account url: %s", account.Url)
+	log.Printf("Account url: %s", account.URL)
 
 	// prepend the .well-known/acme-challenge path to the webroot path
 	webroot = filepath.Join(webroot, ".well-known", "acme-challenge")
@@ -98,9 +98,9 @@ func main() {
 
 	// collect the comma separated domains into acme identifiers
 	domainList := strings.Split(domains, ",")
-	var ids []acme.AcmeIdentifier
+	var ids []acme.Identifier
 	for _, domain := range domainList {
-		ids = append(ids, acme.AcmeIdentifier{Type: "dns", Value: domain})
+		ids = append(ids, acme.Identifier{Type: "dns", Value: domain})
 	}
 
 	// create a new order with the acme service given the provided identifiers
@@ -109,7 +109,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error creating new order: %v", err)
 	}
-	log.Printf("Order created: %s", order.Url)
+	log.Printf("Order created: %s", order.URL)
 
 	// loop through each of the provided authorization urls
 	for _, authUrl := range order.Authorizations {
@@ -122,7 +122,7 @@ func main() {
 		log.Printf("Fetched authorization: %s", auth.Identifier.Value)
 
 		// grab a http-01 challenge from the authorization if it exists
-		chal, ok := auth.ChallengeMap[acme.AcmeChallengeTypeHttp01]
+		chal, ok := auth.ChallengeMap[acme.AcmeChallengeTypeHTTP01]
 		if !ok {
 			log.Fatalf("Unable to find http challenge for auth %s", auth.Identifier.Value)
 		}
@@ -136,7 +136,7 @@ func main() {
 		}
 
 		// update the acme server that the challenge file is ready to be queried
-		log.Printf("Updating challenge for authorization %s: %s", auth.Identifier.Value, chal.Url)
+		log.Printf("Updating challenge for authorization %s: %s", auth.Identifier.Value, chal.URL)
 		chal, err = client.UpdateChallenge(account, chal)
 		if err != nil {
 			log.Fatalf("Error updating authorization %s challenge: %v", auth.Identifier.Value, err)
@@ -186,7 +186,7 @@ func main() {
 	}
 
 	// finalize the order with the acme server given a csr
-	log.Printf("Finalising order: %s", order.Url)
+	log.Printf("Finalising order: %s", order.URL)
 	order, err = client.FinalizeOrder(account, order, csr)
 	if err != nil {
 		log.Fatalf("Error finalizing order: %v", err)
@@ -215,37 +215,37 @@ func main() {
 	log.Printf("Done.")
 }
 
-func loadAccount(client acme.AcmeClient) (acme.AcmeAccount, error) {
+func loadAccount(client acme.Client) (acme.Account, error) {
 	raw, err := ioutil.ReadFile(accountFile)
 	if err != nil {
-		return acme.AcmeAccount{}, err
+		return acme.Account{}, err
 	}
 	var accountFile acmeAccountFile
 	if err := json.Unmarshal(raw, &accountFile); err != nil {
-		return acme.AcmeAccount{}, fmt.Errorf("error reading account file %q: %v", accountFile, err)
+		return acme.Account{}, fmt.Errorf("error reading account file %q: %v", accountFile, err)
 	}
-	account, err := client.UpdateAccount(acme.AcmeAccount{PrivateKey: accountFile.PrivateKey, Url: accountFile.Url}, true, getContacts()...)
+	account, err := client.UpdateAccount(acme.Account{PrivateKey: accountFile.PrivateKey, URL: accountFile.Url}, true, getContacts()...)
 	if err != nil {
-		return acme.AcmeAccount{}, fmt.Errorf("error updating existing account: %v", err)
+		return acme.Account{}, fmt.Errorf("error updating existing account: %v", err)
 	}
 	return account, nil
 }
 
-func createAccount(client acme.AcmeClient) (acme.AcmeAccount, error) {
+func createAccount(client acme.Client) (acme.Account, error) {
 	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
-		return acme.AcmeAccount{}, fmt.Errorf("error creating private key: %v", err)
+		return acme.Account{}, fmt.Errorf("error creating private key: %v", err)
 	}
 	account, err := client.NewAccount(privKey, false, true, getContacts()...)
 	if err != nil {
-		return acme.AcmeAccount{}, fmt.Errorf("error creating new account: %v", err)
+		return acme.Account{}, fmt.Errorf("error creating new account: %v", err)
 	}
-	raw, err := json.Marshal(acmeAccountFile{PrivateKey: privKey, Url: account.Url})
+	raw, err := json.Marshal(acmeAccountFile{PrivateKey: privKey, Url: account.URL})
 	if err != nil {
-		return acme.AcmeAccount{}, fmt.Errorf("error parsing new account: %v", err)
+		return acme.Account{}, fmt.Errorf("error parsing new account: %v", err)
 	}
 	if err := ioutil.WriteFile(accountFile, raw, 0600); err != nil {
-		return acme.AcmeAccount{}, fmt.Errorf("error creating account file: %v", err)
+		return acme.Account{}, fmt.Errorf("error creating account file: %v", err)
 	}
 	return account, nil
 }

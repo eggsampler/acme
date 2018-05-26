@@ -21,7 +21,7 @@ import (
 
 func main() {
 	autoCert := autocert.AutoCert{
-		DirectoryUrl: acme.LETSENCRYPT_STAGING,
+		DirectoryURL: acme.LetsEncryptStaging,
 		RootCert: `-----BEGIN CERTIFICATE-----
 MIIEqzCCApOgAwIBAgIRAIvhKg5ZRO08VGQx8JdhT+UwDQYJKoZIhvcNAQELBQAw
 GjEYMBYGA1UEAwwPRmFrZSBMRSBSb290IFgxMB4XDTE2MDUyMzIyMDc1OVoXDTM2

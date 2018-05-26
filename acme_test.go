@@ -11,16 +11,16 @@ import (
 )
 
 const (
-	testDirectoryUrl = "http://localhost:4001/directory" // boulder
+	testDirectoryURL = "http://localhost:4001/directory" // boulder
 )
 
-var testClient AcmeClient
+var testClient Client
 var challengeMap sync.Map
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
 	var err error
-	testClient, err = NewClient(testDirectoryUrl)
+	testClient, err = NewClient(testDirectoryURL)
 	if err != nil {
 		panic("error connecting to acme server: " + err.Error())
 	}
@@ -74,29 +74,29 @@ func TestParseLinks(t *testing.T) {
 		Name        string
 		LinkHeaders []string
 		WantedLink  string
-		ExpectedUrl string
+		ExpectedURL string
 	}{
 		{
 			Name:        "no links",
 			WantedLink:  "fail",
-			ExpectedUrl: "",
+			ExpectedURL: "",
 		},
 		{Name: "joined links",
 			LinkHeaders: []string{`<https://url/path>; rel="next", <http://url/path?query>; rel="up"`},
 			WantedLink:  "up",
-			ExpectedUrl: "http://url/path?query",
+			ExpectedURL: "http://url/path?query",
 		},
 		{
 			Name:        "separate links",
 			LinkHeaders: []string{`<https://url/path>; rel="next"`, `<http://url/path?query>; rel="up"`},
 			WantedLink:  "up",
-			ExpectedUrl: "http://url/path?query",
+			ExpectedURL: "http://url/path?query",
 		},
 	}
 	for _, currentTest := range linkTests {
-		linkUrl := fetchLink(&http.Response{Header: http.Header{"Link": currentTest.LinkHeaders}}, currentTest.WantedLink)
-		if linkUrl != currentTest.ExpectedUrl {
-			t.Fatalf("%s: links not equal, expected: %s, got: %s", currentTest.Name, currentTest.ExpectedUrl, linkUrl)
+		linkURL := fetchLink(&http.Response{Header: http.Header{"Link": currentTest.LinkHeaders}}, currentTest.WantedLink)
+		if linkURL != currentTest.ExpectedURL {
+			t.Fatalf("%s: links not equal, expected: %s, got: %s", currentTest.Name, currentTest.ExpectedURL, linkURL)
 		}
 	}
 }

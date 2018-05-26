@@ -9,27 +9,27 @@ import (
 func TestCheckError(t *testing.T) {
 	errorTests := []struct {
 		Name           string
-		Url            string
+		URL            string
 		ExpectedStatus []int
 	}{
 		{
 			Name:           "test expecting http 202, but got 200",
-			Url:            testDirectoryUrl,
+			URL:            testDirectoryURL,
 			ExpectedStatus: []int{202},
 		},
 		{
 			Name:           "test acme error expecting ok",
-			Url:            testClient.Directory.NewAccount,
+			URL:            testClient.Directory.NewAccount,
 			ExpectedStatus: []int{http.StatusOK},
 		},
 		{
 			Name:           "test http error expecting ok",
-			Url:            testClient.Directory.NewAccount + "/asdasdasdasdasd",
+			URL:            testClient.Directory.NewAccount + "/asdasdasdasdasd",
 			ExpectedStatus: []int{http.StatusOK},
 		},
 	}
 	for _, currentTest := range errorTests {
-		resp, err := http.Get(currentTest.Url)
+		resp, err := http.Get(currentTest.URL)
 		if err != nil {
 			t.Fatalf("error %s: expected no error, got: %v", currentTest.Name, err)
 		}
@@ -38,7 +38,7 @@ func TestCheckError(t *testing.T) {
 		}
 	}
 
-	resp, err := http.Get(testDirectoryUrl)
+	resp, err := http.Get(testDirectoryURL)
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
@@ -47,8 +47,8 @@ func TestCheckError(t *testing.T) {
 	}
 }
 
-func TestAcmeError_Error(t *testing.T) {
-	err := AcmeError{}
+func TestProblem_Error(t *testing.T) {
+	err := Problem{}
 	s := error(err).Error()
 	if !strings.HasPrefix(s, "acme: error code") {
 		t.Fatalf("unexpected acme error: %v", err)
