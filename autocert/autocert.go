@@ -326,6 +326,10 @@ func (m *AutoCert) issueCert(domainName string) (*tls.Certificate, error) {
 			return nil, fmt.Errorf("autocert: error fetching authorization Url %q: %v", authUrl, err)
 		}
 
+		if auth.Status == "valid" {
+			continue
+		}
+
 		chal, ok := auth.ChallengeMap[acme.AcmeChallengeTypeHttp01]
 		if !ok {
 			return nil, fmt.Errorf("autocert: unable to find http-01 challenge for auth %s, Url: %s", auth.Identifier.Value, authUrl)
