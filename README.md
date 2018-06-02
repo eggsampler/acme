@@ -18,5 +18,3 @@ An example of how to use the autocert package is also provided in examples/autoc
 ## Tests
 
 The tests are designed to be run against a local instance of [boulder](https://github.com/letsencrypt/boulder) running the `config-next` configuration along with the FAKE_DNS variable set.
-
-The option `OrderReadyStatus` in `test/config-test/sa.json` will also need to be set to `true` until this is set by default in boulder.
