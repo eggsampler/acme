@@ -17,4 +17,6 @@ An example of how to use the autocert package is also provided in examples/autoc
 
 ## Tests
 
-The tests are designed to be run against a local instance of [boulder](https://github.com/letsencrypt/boulder) running the `config-next` configuration along with the FAKE_DNS variable set.
+The tests are designed to be run against a local instance of [boulder](https://github.com/letsencrypt/boulder) running the `config-next` configuration.
+
+Currently tests also need to have the `chaltestsrv` responding to http01 challenges. This is currently disabled by default and can be enabled by editting `test/startservers.py` and ensure `chaltestsrv` is running with the flag `--http01 :5002` instead of `--http01 ""`

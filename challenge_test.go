@@ -1,6 +1,11 @@
 package acme
 
-import "testing"
+import (
+	"bytes"
+	"encoding/json"
+	"net/http"
+	"testing"
+)
 
 func TestEncodeDns01KeyAuthorization(t *testing.T) {
 	tests := []struct {
@@ -36,9 +41,42 @@ func makeChal(t *testing.T, identifiers []Identifier, challengeType string) (Acc
 	return Account{}, Order{}, Challenge{}
 }
 
+func addHTTP01(token, content string) {
+	addReq := struct {
+		Token   string `json:"token"`
+		Content string `json:"content"`
+	}{
+		Token:   token,
+		Content: content,
+	}
+	addReqJSON, err := json.Marshal(addReq)
+	if err != nil {
+		panic(err)
+	}
+	if _, err := http.Post("http://localhost:8055/add-http01", "application/json", bytes.NewReader(addReqJSON)); err != nil {
+		panic(err)
+	}
+}
+
+func delHTTP01(token string) {
+	delReq := struct {
+		Token string `json:"token"`
+	}{
+		Token: token,
+	}
+	delReqJSON, err := json.Marshal(delReq)
+	if err != nil {
+		panic(err)
+	}
+	if _, err := http.Post("http://localhost:8055/add-http01", "application/json", bytes.NewReader(delReqJSON)); err != nil {
+		panic(err)
+	}
+}
+
 func updateChalHTTP(t *testing.T, account Account, challenge Challenge) Challenge {
 	// test challenge succeeding after error
-	challengeMap.Store(challenge.Token, challenge.KeyAuthorization)
+	addHTTP01(challenge.Token, challenge.KeyAuthorization)
+	defer delHTTP01(challenge.Token)
 	challenge, err := testClient.UpdateChallenge(account, challenge)
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)

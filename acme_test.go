@@ -1,11 +1,8 @@
 package acme
 
 import (
-	"fmt"
 	"math/rand"
 	"net/http"
-	"path/filepath"
-	"sync"
 	"testing"
 	"time"
 )
@@ -15,7 +12,6 @@ const (
 )
 
 var testClient Client
-var challengeMap sync.Map
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
@@ -24,28 +20,6 @@ func init() {
 	if err != nil {
 		panic("error connecting to acme server: " + err.Error())
 	}
-
-	// set up a http server used in challenges to serve http-01 auth responses from the challenge map
-	challengeMap = sync.Map{}
-	s := &http.Server{Addr: ":5002"}
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		token := filepath.Base(r.URL.Path)
-		keyAuth, ok := challengeMap.Load(token)
-		if !ok {
-			http.NotFound(w, r)
-			return
-		}
-		w.Write([]byte(fmt.Sprintf("%v", keyAuth)))
-	})
-	s.Handler = mux
-	go func() {
-		if err := s.ListenAndServe(); err != nil {
-			if err != http.ErrServerClosed {
-				panic("error listening: " + err.Error())
-			}
-		}
-	}()
 }
 
 func randString() string {

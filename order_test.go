@@ -3,16 +3,16 @@ package acme
 import (
 	"testing"
 
+	"bytes"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"fmt"
+	"encoding/json"
 	"net/http"
 	"reflect"
-	"strings"
 )
 
 func TestClient_NewOrder(t *testing.T) {
@@ -148,6 +148,38 @@ func TestClient_FinalizeOrder(t *testing.T) {
 	makeOrderFinal(t, []string{randString() + ".com"})
 }
 
+func setTXT(host, value string) {
+	setReq := struct {
+		Host  string `json:"host"`
+		Value string `json:"value"`
+	}{
+		Host:  host,
+		Value: value,
+	}
+	setReqJSON, err := json.Marshal(setReq)
+	if err != nil {
+		panic(err)
+	}
+	if _, err := http.Post("http://localhost:8055/set-txt", "application/json", bytes.NewReader(setReqJSON)); err != nil {
+		panic(err)
+	}
+}
+
+func clearTXT(host string) {
+	clearReq := struct {
+		Host string `json:"host"`
+	}{
+		Host: host,
+	}
+	clearReqJSON, err := json.Marshal(clearReq)
+	if err != nil {
+		panic(err)
+	}
+	if _, err := http.Post("http://localhost:8055/clear-txt", "application/json", bytes.NewReader(clearReqJSON)); err != nil {
+		panic(err)
+	}
+}
+
 func TestWildcard(t *testing.T) {
 	// this test uses the fake dns resolver in the boulder docker-compose setup
 	randomDomain := randString() + ".com"
@@ -169,10 +201,10 @@ func TestWildcard(t *testing.T) {
 			t.Fatal("no dns challenge provided")
 		}
 
-		setReq := fmt.Sprintf(`{"host":"%s","value":"%s"}`, "_acme-challenge."+currentAuth.Identifier.Value+".", EncodeDNS01KeyAuthorization(chal.KeyAuthorization))
-		if _, err := http.Post("http://localhost:8055/set-txt", "application/json", strings.NewReader(setReq)); err != nil {
-			t.Fatalf("error setting txt: %v", err)
-		}
+		host := "_acme-challenge." + currentAuth.Identifier.Value + "."
+		value := EncodeDNS01KeyAuthorization(chal.KeyAuthorization)
+		setTXT(host, value)
+		defer clearTXT(host)
 
 		if _, err := testClient.UpdateChallenge(account, chal); err != nil {
 			t.Fatalf("error update challenge: %v", err)
