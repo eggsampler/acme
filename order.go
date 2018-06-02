@@ -54,11 +54,8 @@ func (c Client) FetchOrder(orderURL string) (Order, error) {
 		URL: orderURL, // boulder response doesn't seem to contain location header for this request
 	}
 	_, err := c.get(orderURL, &orderResp, http.StatusOK)
-	if err != nil {
-		return orderResp, err
-	}
 
-	return orderResp, nil
+	return orderResp, err
 }
 
 // Helper function to determine whether an order is "finished" by it's status.

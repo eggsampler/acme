@@ -2,7 +2,7 @@ package acme
 
 import "testing"
 
-func TestAcmeClient_FetchAuthorization(t *testing.T) {
+func TestClient_FetchAuthorization(t *testing.T) {
 	account, order := makeOrder(t, []Identifier{{"dns", randString() + ".com"}})
 
 	auth, err := testClient.FetchAuthorization(account, order.Authorizations[0])
@@ -17,7 +17,7 @@ func TestAcmeClient_FetchAuthorization(t *testing.T) {
 	}
 }
 
-func TestAcmeClient_DeactivateAuthorization(t *testing.T) {
+func TestClient_DeactivateAuthorization(t *testing.T) {
 	account, order := makeOrder(t, []Identifier{{"dns", randString() + ".com"}})
 
 	auth, err := testClient.DeactivateAuthorization(account, order.Authorizations[0])

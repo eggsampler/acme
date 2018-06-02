@@ -113,9 +113,6 @@ func (c Client) DeactivateAccount(account Account) (Account, error) {
 	}
 
 	_, err := c.post(account.URL, account.URL, account.PrivateKey, deactivateReq, &account, http.StatusOK)
-	if err != nil {
-		return account, err
-	}
 
-	return account, nil
+	return account, err
 }

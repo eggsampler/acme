@@ -18,7 +18,7 @@ func makePrivateKey(t *testing.T) crypto.Signer {
 	return privKey
 }
 
-func TestAcmeClient_NewAccount(t *testing.T) {
+func TestClient_NewAccount(t *testing.T) {
 	errorTests := []struct {
 		Name                 string
 		OnlyReturnExisting   bool
@@ -56,7 +56,9 @@ func TestAcmeClient_NewAccount(t *testing.T) {
 			t.Fatalf("%s no acme error type present: %+v", currentTest.Name, acmeErr)
 		}
 	}
+}
 
+func TestClient_NewAccount2(t *testing.T) {
 	successTests := []struct {
 		Name    string
 		Contact []string
@@ -75,35 +77,9 @@ func TestAcmeClient_NewAccount(t *testing.T) {
 			t.Fatalf("unexpected error %s: %v", currentTest.Name, err)
 		}
 	}
-
-	// test making a new account
-	key := makePrivateKey(t)
-	newAccount, err := testClient.NewAccount(key, false, true)
-	if err != nil {
-		t.Fatalf("unexpected error making new account: %v", err)
-	}
-
-	// test fetching an existing account
-	existingAccount, err := testClient.NewAccount(key, true, true)
-	if err != nil {
-		t.Fatalf("unexpected error fetching existing account: %v", err)
-	}
-	if !reflect.DeepEqual(newAccount, existingAccount) {
-		t.Fatalf("accounts are different")
-	}
-
-	// test updating an account
-	contact := []string{"mailto:test@test.com"}
-	updatedAccount, err := testClient.UpdateAccount(existingAccount, true, contact...)
-	if err != nil {
-		t.Fatalf("unexpected error updating account: %v", err)
-	}
-	if !reflect.DeepEqual(updatedAccount.Contact, contact) {
-		t.Fatalf("error updating account, contacts dont match, expected %v, got: %v", contact, updatedAccount.Contact)
-	}
 }
 
-func TestAcmeClient_UpdateAccount(t *testing.T) {
+func TestClient_UpdateAccount(t *testing.T) {
 	key := makePrivateKey(t)
 	account, err := testClient.NewAccount(key, false, true)
 	if err != nil {
@@ -121,7 +97,7 @@ func TestAcmeClient_UpdateAccount(t *testing.T) {
 	}
 }
 
-func TestAcmeClient_AccountKeyChange(t *testing.T) {
+func TestClient_AccountKeyChange(t *testing.T) {
 	key := makePrivateKey(t)
 	account, err := testClient.NewAccount(key, false, true)
 	if err != nil {
@@ -143,7 +119,7 @@ func TestAcmeClient_AccountKeyChange(t *testing.T) {
 	}
 }
 
-func TestAcmeClient_DeactivateAccount(t *testing.T) {
+func TestClient_DeactivateAccount(t *testing.T) {
 	key := makePrivateKey(t)
 	account, err := testClient.NewAccount(key, false, true)
 	if err != nil {

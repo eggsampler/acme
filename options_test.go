@@ -25,7 +25,7 @@ func TestWithInsecureSkipVerify(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	tr := acmeClient.httpClient.Transport.(*http.Transport)
-	if tr.TLSClientConfig.InsecureSkipVerify != true {
+	if !tr.TLSClientConfig.InsecureSkipVerify {
 		t.Fatalf("InsecureSkipVerify not set")
 	}
 }

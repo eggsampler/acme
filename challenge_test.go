@@ -50,13 +50,13 @@ func updateChalHTTP(t *testing.T, account Account, challenge Challenge) Challeng
 	return challenge
 }
 
-func TestAcmeClient_UpdateChallenge(t *testing.T) {
+func TestClient_UpdateChallenge(t *testing.T) {
 	account, _, chal := makeChal(t, []Identifier{{"dns", randString() + ".com"}}, AcmeChallengeTypeHTTP01)
 
 	updateChalHTTP(t, account, chal)
 }
 
-func TestAcmeClient_FetchChallenge(t *testing.T) {
+func TestClient_FetchChallenge(t *testing.T) {
 	_, _, chal := makeChal(t, []Identifier{{"dns", randString() + ".com"}}, AcmeChallengeTypeHTTP01)
 
 	fetchedChal, err := testClient.FetchChallenge(chal.URL)

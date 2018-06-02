@@ -37,9 +37,7 @@ func (c Client) DeactivateAuthorization(account Account, authURL string) (Author
 	}
 	deactivateResp := Authorization{}
 
-	if _, err := c.post(authURL, account.URL, account.PrivateKey, deactivateReq, &deactivateResp, http.StatusOK); err != nil {
-		return deactivateResp, err
-	}
+	_, err := c.post(authURL, account.URL, account.PrivateKey, deactivateReq, &deactivateResp, http.StatusOK)
 
-	return deactivateResp, nil
+	return deactivateResp, err
 }

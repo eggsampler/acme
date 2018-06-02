@@ -2,7 +2,7 @@ package acme
 
 import "testing"
 
-func TestAcmeClient_FetchCertificates(t *testing.T) {
+func TestClient_FetchCertificates(t *testing.T) {
 	domains := []string{randString() + ".com"}
 	_, order, _ := makeOrderFinal(t, domains)
 	if order.Certificate == "" {
@@ -22,7 +22,7 @@ func TestAcmeClient_FetchCertificates(t *testing.T) {
 	}
 }
 
-func TestAcmeClient_RevokeCertificate(t *testing.T) {
+func TestClient_RevokeCertificate(t *testing.T) {
 	// test revoking cert with cert key
 	domains := []string{randString() + ".com"}
 	account, order, privKey := makeOrderFinal(t, domains)
@@ -38,7 +38,7 @@ func TestAcmeClient_RevokeCertificate(t *testing.T) {
 	}
 }
 
-func TestAcmeClient_RevokeCertificate2(t *testing.T) {
+func TestClient_RevokeCertificate2(t *testing.T) {
 	// test revoking cert with account key
 	domains := []string{randString() + ".com"}
 	account, order, _ := makeOrderFinal(t, domains)

@@ -15,7 +15,7 @@ import (
 	"strings"
 )
 
-func TestAcmeClient_NewOrder(t *testing.T) {
+func TestClient_NewOrder(t *testing.T) {
 	key := makePrivateKey(t)
 	account, err := testClient.NewAccount(key, false, true)
 	if err != nil {
@@ -60,7 +60,7 @@ func makeOrder(t *testing.T, identifiers []Identifier) (Account, Order) {
 	return account, order
 }
 
-func TestAcmeClient_FetchOrder(t *testing.T) {
+func TestClient_FetchOrder(t *testing.T) {
 	if _, err := testClient.FetchOrder(testDirectoryURL + "/asdasdasd"); err == nil {
 		t.Fatal("expected error, got none")
 	}
@@ -144,7 +144,7 @@ func makeOrderFinal(t *testing.T, domains []string) (Account, Order, crypto.Sign
 	return account, finalizedOrder, privKey
 }
 
-func TestAcmeClient_FinalizeOrder(t *testing.T) {
+func TestClient_FinalizeOrder(t *testing.T) {
 	makeOrderFinal(t, []string{randString() + ".com"})
 }
 
