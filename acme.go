@@ -30,6 +30,10 @@ const (
 func NewClient(directoryURL string, options ...OptionFunc) (Client, error) {
 	httpClient := http.DefaultClient
 
+	// Set a default http timeout of 60 seconds
+	// can be overridden via OptionFunc eg: acme.NewClient(url, WithHTTPTimeout(10 * time.Second))
+	httpClient.Timeout = 60 * time.Second
+
 	ns := &nonceStack{
 		client: httpClient,
 	}
