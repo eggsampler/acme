@@ -9,7 +9,7 @@ import (
 // OptionFunc function prototype for passing options to NewClient
 type OptionFunc func(client Client) error
 
-// WithHTTPTimeout sets a timeout on the http client used by the AcmeClient
+// WithHTTPTimeout sets a timeout on the http client used by the Client
 func WithHTTPTimeout(duration time.Duration) OptionFunc {
 	return func(client Client) error {
 		client.httpClient.Timeout = duration
@@ -17,7 +17,7 @@ func WithHTTPTimeout(duration time.Duration) OptionFunc {
 	}
 }
 
-// WithInsecureSkipVerify sets InsecureSkipVerify on the http client transport tls client config used by the AcmeClient
+// WithInsecureSkipVerify sets InsecureSkipVerify on the http client transport tls client config used by the Client
 func WithInsecureSkipVerify() OptionFunc {
 	return func(client Client) error {
 		client.httpClient.Transport = &http.Transport{

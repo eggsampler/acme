@@ -7,9 +7,10 @@ import (
 )
 
 // Different possible challenge types provided by an ACME server.
-var (
-	AcmeChallengeTypeDNS01  = "dns-01"
-	AcmeChallengeTypeHTTP01 = "http-01"
+const (
+	ChallengeTypeDNS01     = "dns-01"
+	ChallengeTypeHTTP01    = "http-01"
+	ChallengeTypeTLSALPN01 = "tls-alpn-01"
 )
 
 // Constants used for certificate revocation, used for RevokeCertificate
@@ -60,7 +61,7 @@ type Client struct {
 	// The directory object returned by the client connecting to a directory url.
 	Directory Directory
 
-	// The amount of total time the AcmeClient will wait at most for a challenge to be updated or a certificate to be issued.
+	// The amount of total time the Client will wait at most for a challenge to be updated or a certificate to be issued.
 	// Default 30 seconds if duration is not set or if set to 0.
 	PollTimeout time.Duration
 

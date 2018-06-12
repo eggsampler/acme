@@ -122,7 +122,7 @@ func main() {
 		log.Printf("Fetched authorization: %s", auth.Identifier.Value)
 
 		// grab a http-01 challenge from the authorization if it exists
-		chal, ok := auth.ChallengeMap[acme.AcmeChallengeTypeHTTP01]
+		chal, ok := auth.ChallengeMap[acme.ChallengeTypeHTTP01]
 		if !ok {
 			log.Fatalf("Unable to find http challenge for auth %s", auth.Identifier.Value)
 		}

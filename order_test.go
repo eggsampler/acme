@@ -37,7 +37,7 @@ func TestClient_NewOrder(t *testing.T) {
 		t.Fatal("expected error, got none")
 	}
 	if _, ok := err.(Problem); !ok {
-		t.Fatalf("expected AcmeError, got: %v - %v", reflect.TypeOf(err), err)
+		t.Fatalf("expected Problem, got: %v - %v", reflect.TypeOf(err), err)
 	}
 }
 
@@ -118,7 +118,7 @@ func makeOrderFinal(t *testing.T, domains []string) (Account, Order, crypto.Sign
 		identifiers = append(identifiers, Identifier{"dns", s})
 	}
 
-	account, order, chal := makeChal(t, identifiers, AcmeChallengeTypeHTTP01)
+	account, order, chal := makeChal(t, identifiers, ChallengeTypeHTTP01)
 	if order.Status != "pending" {
 		t.Fatalf("expected pending order status, got: %s", order.Status)
 	}
@@ -196,7 +196,7 @@ func TestWildcard(t *testing.T) {
 			t.Fatalf("fetching auth: %v", err)
 		}
 
-		chal, ok := currentAuth.ChallengeMap[AcmeChallengeTypeDNS01]
+		chal, ok := currentAuth.ChallengeMap[ChallengeTypeDNS01]
 		if !ok {
 			t.Fatal("no dns challenge provided")
 		}
