@@ -59,9 +59,12 @@ func TestClient_NewAccount(t *testing.T) {
 }
 
 func TestClient_NewAccount2(t *testing.T) {
+	existingKey := makePrivateKey(t)
 	successTests := []struct {
-		Name    string
-		Contact []string
+		Name     string
+		Existing bool
+		Key      crypto.Signer
+		Contact  []string
 	}{
 		{
 			Name: "new account without contact",
@@ -70,10 +73,24 @@ func TestClient_NewAccount2(t *testing.T) {
 			Name:    "new account with contact",
 			Contact: []string{"mailto:test@test.com"},
 		},
+		{
+			Name: "new account for fetching existing",
+			Key:  existingKey,
+		},
+		{
+			Name:     "fetching existing account",
+			Key:      existingKey,
+			Existing: true,
+		},
 	}
 	for _, currentTest := range successTests {
-		key := makePrivateKey(t)
-		if _, err := testClient.NewAccount(key, false, true, currentTest.Contact...); err != nil {
+		var key crypto.Signer
+		if currentTest.Key != nil {
+			key = currentTest.Key
+		} else {
+			key = makePrivateKey(t)
+		}
+		if _, err := testClient.NewAccount(key, currentTest.Existing, true, currentTest.Contact...); err != nil {
 			t.Fatalf("unexpected error %s: %v", currentTest.Name, err)
 		}
 	}
@@ -94,6 +111,28 @@ func TestClient_UpdateAccount(t *testing.T) {
 
 	if !reflect.DeepEqual(updatedAccount.Contact, contact) {
 		t.Fatalf("contact mismatch, expected: %v, got: %v", contact, updatedAccount.Contact)
+	}
+}
+
+func TestClient_UpdateAccount2(t *testing.T) {
+	key := makePrivateKey(t)
+	account, err := testClient.NewAccount(key, false, true)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	updatedAccount, err := testClient.UpdateAccount(Account{PrivateKey: key, URL: account.URL}, true)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !reflect.DeepEqual(account, updatedAccount) {
+		t.Fatalf("account and updated account mismatch, expected: %+v, got: %+v", account, updatedAccount)
+	}
+
+	_, err = testClient.UpdateAccount(Account{PrivateKey: key}, true)
+	if err == nil {
+		t.Fatalf("expected error, got none")
 	}
 }
 
