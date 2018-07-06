@@ -178,3 +178,68 @@ func TestWildcard(t *testing.T) {
 		t.Fatalf("expected ready, got: %s", updatedOrder.Status)
 	}
 }
+
+func addTLSALPN01(token, content string) {
+	addReq := struct {
+		Host    string `json:"host"`
+		Content string `json:"content"`
+	}{
+		Host:    token,
+		Content: content,
+	}
+	addReqJSON, err := json.Marshal(addReq)
+	if err != nil {
+		panic(err)
+	}
+	if _, err := http.Post("http://localhost:8055/add-tlsalpn01", "application/json", bytes.NewReader(addReqJSON)); err != nil {
+		panic(err)
+	}
+}
+
+func delTLSALPN01(token string) {
+	delReq := struct {
+		Host string `json:"token"`
+	}{
+		Host: token,
+	}
+	delReqJSON, err := json.Marshal(delReq)
+	if err != nil {
+		panic(err)
+	}
+	if _, err := http.Post("http://localhost:8055/add-tlsalpn01", "application/json", bytes.NewReader(delReqJSON)); err != nil {
+		panic(err)
+	}
+}
+
+func TestClient_TLSALPN01(t *testing.T) {
+	account, order := makeOrder(t, []Identifier{{Type: "dns", Value: randString() + ".com"}})
+
+	for _, authURL := range order.Authorizations {
+		currentAuth, err := testClient.FetchAuthorization(account, authURL)
+		if err != nil {
+			t.Fatalf("fetching auth: %v", err)
+		}
+
+		chal, ok := currentAuth.ChallengeMap[ChallengeTypeTLSALPN01]
+		if !ok {
+			t.Fatalf("no tls alpn 01 challenge provided: %+v", currentAuth.Challenges)
+		}
+
+		addTLSALPN01(currentAuth.Identifier.Value, chal.KeyAuthorization)
+		defer delTLSALPN01(currentAuth.Identifier.Value)
+
+		if _, err := testClient.UpdateChallenge(account, chal); err != nil {
+			t.Fatalf("error update challenge: %v", err)
+		}
+	}
+
+	updatedOrder, err := testClient.FetchOrder(order.URL)
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+
+	if updatedOrder.Status != "ready" {
+		t.Fatalf("expected ready, got: %s", updatedOrder.Status)
+	}
+
+}
