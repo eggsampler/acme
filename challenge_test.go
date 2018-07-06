@@ -169,13 +169,26 @@ func TestWildcard(t *testing.T) {
 		}
 	}
 
-	updatedOrder, err := testClient.FetchOrder(order.URL)
+	csr, _ := newCSR(t, domains)
+
+	finalOrder, err := testClient.FinalizeOrder(account, order, csr)
 	if err != nil {
-		t.Fatalf("expected no error, got: %v", err)
+		t.Fatalf("error finalizing: %v", err)
 	}
 
-	if updatedOrder.Status != "ready" {
-		t.Fatalf("expected ready, got: %s", updatedOrder.Status)
+	certs, err := testClient.FetchCertificates(finalOrder.Certificate)
+	if err != nil {
+		t.Fatalf("error fetch cert: %v", err)
+	}
+	if len(certs) == 0 {
+		t.Fatal("no certs")
+	}
+
+	cert := certs[0]
+	for _, d := range domains {
+		if err := cert.VerifyHostname(d); err != nil {
+			t.Fatalf("error verifying hostname %s: %v", d, err)
+		}
 	}
 }
 
