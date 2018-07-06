@@ -12,9 +12,8 @@ import (
 // EncodeDNS01KeyAuthorization encodes a key authorization and provides a value to be put in the TXT record for the _acme-challenge DNS entry.
 // More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-8.4
 func EncodeDNS01KeyAuthorization(keyAuth string) string {
-	h := sha256.New()
-	h.Write([]byte(keyAuth))
-	return base64.RawURLEncoding.EncodeToString(h.Sum(nil))
+	h := sha256.Sum256([]byte(keyAuth))
+	return base64.RawURLEncoding.EncodeToString(h[:])
 }
 
 // Helper function to determine whether a challenge is "finished" by it's status.
