@@ -105,3 +105,89 @@ func TestClient_FetchChallenge(t *testing.T) {
 		t.Fatalf("tokens different")
 	}
 }
+
+func setTXT(host, value string) {
+	setReq := struct {
+		Host  string `json:"host"`
+		Value string `json:"value"`
+	}{
+		Host:  host,
+		Value: value,
+	}
+	setReqJSON, err := json.Marshal(setReq)
+	if err != nil {
+		panic(err)
+	}
+	if _, err := http.Post("http://localhost:8055/set-txt", "application/json", bytes.NewReader(setReqJSON)); err != nil {
+		panic(err)
+	}
+}
+
+func clearTXT(host string) {
+	clearReq := struct {
+		Host string `json:"host"`
+	}{
+		Host: host,
+	}
+	clearReqJSON, err := json.Marshal(clearReq)
+	if err != nil {
+		panic(err)
+	}
+	if _, err := http.Post("http://localhost:8055/clear-txt", "application/json", bytes.NewReader(clearReqJSON)); err != nil {
+		panic(err)
+	}
+}
+
+func TestWildcard(t *testing.T) {
+	// this test uses the fake dns resolver in the boulder docker-compose setup
+	randomDomain := randString() + ".com"
+	domains := []string{randomDomain, "*." + randomDomain}
+	var identifiers []Identifier
+	for _, d := range domains {
+		identifiers = append(identifiers, Identifier{"dns", d})
+	}
+	account, order := makeOrder(t, identifiers)
+
+	for _, authURL := range order.Authorizations {
+		currentAuth, err := testClient.FetchAuthorization(account, authURL)
+		if err != nil {
+			t.Fatalf("fetching auth: %v", err)
+		}
+
+		chal, ok := currentAuth.ChallengeMap[ChallengeTypeDNS01]
+		if !ok {
+			t.Fatal("no dns challenge provided")
+		}
+
+		host := "_acme-challenge." + currentAuth.Identifier.Value + "."
+		value := EncodeDNS01KeyAuthorization(chal.KeyAuthorization)
+		setTXT(host, value)
+		defer clearTXT(host)
+
+		if _, err := testClient.UpdateChallenge(account, chal); err != nil {
+			t.Fatalf("error update challenge: %v", err)
+		}
+	}
+
+	csr, _ := newCSR(t, domains)
+
+	finalOrder, err := testClient.FinalizeOrder(account, order, csr)
+	if err != nil {
+		t.Fatalf("error finalizing: %v", err)
+	}
+
+	certs, err := testClient.FetchCertificates(finalOrder.Certificate)
+	if err != nil {
+		t.Fatalf("error fetch cert: %v", err)
+	}
+	if len(certs) == 0 {
+		t.Fatal("no certs")
+	}
+
+	cert := certs[0]
+	for _, d := range domains {
+		if err := cert.VerifyHostname(d); err != nil {
+			t.Fatalf("error verifying hostname %s: %v", d, err)
+		}
+	}
+}
