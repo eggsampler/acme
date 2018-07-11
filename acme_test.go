@@ -1,45 +1,13 @@
 package acme
 
 import (
-	"math/rand"
 	"net/http"
 	"testing"
-	"time"
 )
-
-const (
-	testDirectoryURL = "http://localhost:4001/directory" // boulder
-)
-
-var testClient Client
-
-func init() {
-	rand.Seed(time.Now().UnixNano())
-	var err error
-	testClient, err = NewClient(testDirectoryURL)
-	if err != nil {
-		panic("error connecting to acme server: " + err.Error())
-	}
-}
-
-func randString() string {
-	min := int('a')
-	max := int('z')
-	n := rand.Intn(10) + 10
-	b := make([]byte, n)
-	for i := 0; i < n; i++ {
-		b[i] = byte(rand.Intn(max-min) + min)
-	}
-	return string(b)
-}
 
 func TestNewClient(t *testing.T) {
 	if _, err := NewClient("http://fake"); err == nil {
-		t.Fatalf("expected error, got none")
-	}
-
-	if testClient.Directory.NewAccount == "" {
-		t.Fatalf("error creating new client: no new account url provided")
+		t.Fatal("expected error, got none")
 	}
 }
 

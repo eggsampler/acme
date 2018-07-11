@@ -1,22 +1,11 @@
 package acme
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
 	"testing"
 
 	"crypto"
 	"reflect"
 )
-
-func makePrivateKey(t *testing.T) crypto.Signer {
-	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		t.Fatalf("error creating account private key: %v", err)
-	}
-	return privKey
-}
 
 func TestClient_NewAccount(t *testing.T) {
 	errorTests := []struct {
@@ -97,12 +86,7 @@ func TestClient_NewAccount2(t *testing.T) {
 }
 
 func TestClient_UpdateAccount(t *testing.T) {
-	key := makePrivateKey(t)
-	account, err := testClient.NewAccount(key, false, true)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
+	account := makeAccount(t)
 	contact := []string{"mailto:test@test.com"}
 	updatedAccount, err := testClient.UpdateAccount(account, true, contact...)
 	if err != nil {
@@ -115,13 +99,8 @@ func TestClient_UpdateAccount(t *testing.T) {
 }
 
 func TestClient_UpdateAccount2(t *testing.T) {
-	key := makePrivateKey(t)
-	account, err := testClient.NewAccount(key, false, true)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	updatedAccount, err := testClient.UpdateAccount(Account{PrivateKey: key, URL: account.URL}, true)
+	account := makeAccount(t)
+	updatedAccount, err := testClient.UpdateAccount(Account{PrivateKey: account.PrivateKey, URL: account.URL}, true)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -130,19 +109,14 @@ func TestClient_UpdateAccount2(t *testing.T) {
 		t.Fatalf("account and updated account mismatch, expected: %+v, got: %+v", account, updatedAccount)
 	}
 
-	_, err = testClient.UpdateAccount(Account{PrivateKey: key}, true)
+	_, err = testClient.UpdateAccount(Account{PrivateKey: account.PrivateKey}, true)
 	if err == nil {
 		t.Fatalf("expected error, got none")
 	}
 }
 
 func TestClient_AccountKeyChange(t *testing.T) {
-	key := makePrivateKey(t)
-	account, err := testClient.NewAccount(key, false, true)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
+	account := makeAccount(t)
 	newKey := makePrivateKey(t)
 	accountNewKey, err := testClient.AccountKeyChange(account, newKey)
 	if err != nil {
@@ -159,12 +133,8 @@ func TestClient_AccountKeyChange(t *testing.T) {
 }
 
 func TestClient_DeactivateAccount(t *testing.T) {
-	key := makePrivateKey(t)
-	account, err := testClient.NewAccount(key, false, true)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
+	account := makeAccount(t)
+	var err error
 	account, err = testClient.DeactivateAccount(account)
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
