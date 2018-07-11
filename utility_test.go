@@ -25,7 +25,7 @@ var (
 func init() {
 	mrand.Seed(time.Now().UnixNano())
 	testClient = newBoulderClient()
-	if testClient.Directory.NewAccount == "" {
+	if testClient.Directory().NewAccount == "" {
 		panic("error creating new client: no new account url provided")
 	}
 }
@@ -81,7 +81,7 @@ func makeOrder(t *testing.T, identifiers ...Identifier) (Account, Order) {
 
 func makeOrderFinalised(t *testing.T, supportedChalTypes []string, identifiers ...Identifier) (Account, Order, crypto.Signer) {
 	if len(supportedChalTypes) == 0 {
-		supportedChalTypes = []string{ChallengeTypeHTTP01, ChallengeTypeDNS01, ChallengeTypeTLSALPN01}
+		supportedChalTypes = ValidChallenges()
 	}
 
 	acct, order := makeOrder(t, identifiers...)

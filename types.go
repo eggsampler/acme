@@ -11,7 +11,12 @@ const (
 	ChallengeTypeDNS01     = "dns-01"
 	ChallengeTypeHTTP01    = "http-01"
 	ChallengeTypeTLSALPN01 = "tls-alpn-01"
+	ChallengeTypeTLSSNI01  = "tls-sni-01"
 )
+
+func ValidChallenges() []string {
+	return []string{ChallengeTypeDNS01, ChallengeTypeHTTP01, ChallengeTypeTLSALPN01}
+}
 
 // Constants used for certificate revocation, used for RevokeCertificate
 // More details: https://tools.ietf.org/html/rfc5280#section-5.3.1
