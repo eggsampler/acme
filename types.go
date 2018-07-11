@@ -62,9 +62,7 @@ type Directory struct {
 type Client struct {
 	httpClient *http.Client
 	nonces     *nonceStack
-
-	// The directory object returned by the client connecting to a directory url.
-	Directory Directory
+	dir        Directory
 
 	// The amount of total time the Client will wait at most for a challenge to be updated or a certificate to be issued.
 	// Default 30 seconds if duration is not set or if set to 0.
@@ -135,12 +133,15 @@ type Authorization struct {
 // Challenge object fetched in an authorization or directly from the challenge url.
 // More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-8
 type Challenge struct {
-	Type             string  `json:"type"`
-	Status           string  `json:"status"`
-	URL              string  `json:"url"`
-	Token            string  `json:"token"`
-	Error            Problem `json:"error"`
-	KeyAuthorization string  `json:"keyAuthorization"`
+	Type      string  `json:"type"`
+	URL       string  `json:"url"`
+	Status    string  `json:"status"`
+	Validated string  `json:"validated"`
+	Error     Problem `json:"error"`
+
+	// Based on the challenge used
+	Token            string `json:"token"`
+	KeyAuthorization string `json:"keyAuthorization"`
 
 	// Authorization url provided by the rel="up" Link http header
 	AuthorizationURL string `json:"-"`

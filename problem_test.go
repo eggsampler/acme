@@ -14,17 +14,17 @@ func TestCheckError(t *testing.T) {
 	}{
 		{
 			Name:           "test expecting http 202, but got 200",
-			URL:            testClient.Directory.URL,
+			URL:            testClient.Directory().URL,
 			ExpectedStatus: []int{202},
 		},
 		{
 			Name:           "test acme error expecting ok",
-			URL:            testClient.Directory.NewAccount,
+			URL:            testClient.Directory().NewAccount,
 			ExpectedStatus: []int{http.StatusOK},
 		},
 		{
 			Name:           "test http error expecting ok",
-			URL:            testClient.Directory.NewAccount + "/asdasdasdasdasd",
+			URL:            testClient.Directory().NewAccount + "/asdasdasdasdasd",
 			ExpectedStatus: []int{http.StatusOK},
 		},
 	}
@@ -38,7 +38,7 @@ func TestCheckError(t *testing.T) {
 		}
 	}
 
-	resp, err := http.Get(testClient.Directory.URL)
+	resp, err := http.Get(testClient.Directory().URL)
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}

@@ -23,7 +23,7 @@ func (c Client) NewAccount(privateKey crypto.Signer, onlyReturnExisting, termsOf
 	}
 
 	account := Account{}
-	resp, err := c.post(c.Directory.NewAccount, "", privateKey, newAccountReq, &account, http.StatusOK, http.StatusCreated)
+	resp, err := c.post(c.dir.NewAccount, "", privateKey, newAccountReq, &account, http.StatusOK, http.StatusCreated)
 	if err != nil {
 		return account, err
 	}
@@ -89,12 +89,12 @@ func (c Client) AccountKeyChange(account Account, newPrivateKey crypto.Signer) (
 		NewKey:  []byte(newJwkKeyPub),
 	}
 
-	innerJws, err := jwsEncodeJSON(keyChangeReq, newPrivateKey, c.Directory.KeyChange, "", "")
+	innerJws, err := jwsEncodeJSON(keyChangeReq, newPrivateKey, c.dir.KeyChange, "", "")
 	if err != nil {
 		return account, fmt.Errorf("acme: error encoding inner jws: %v", err)
 	}
 
-	if _, err := c.post(c.Directory.KeyChange, account.URL, account.PrivateKey, json.RawMessage(innerJws), nil, http.StatusOK); err != nil {
+	if _, err := c.post(c.dir.KeyChange, account.URL, account.PrivateKey, json.RawMessage(innerJws), nil, http.StatusOK); err != nil {
 		return account, err
 	}
 

@@ -49,14 +49,19 @@ func NewClient(directoryURL string, options ...OptionFunc) (Client, error) {
 		}
 	}
 
-	if _, err := acmeClient.get(directoryURL, &acmeClient.Directory, http.StatusOK); err != nil {
+	if _, err := acmeClient.get(directoryURL, &acmeClient.dir, http.StatusOK); err != nil {
 		return acmeClient, err
 	}
 
-	acmeClient.Directory.URL = directoryURL
-	ns.newNonceURL = acmeClient.Directory.NewNonce
+	acmeClient.dir.URL = directoryURL
+	ns.newNonceURL = acmeClient.dir.NewNonce
 
 	return acmeClient, nil
+}
+
+// The directory object returned by the client connecting to a directory url.
+func (c Client) Directory() Directory {
+	return c.dir
 }
 
 // Helper function to get the poll interval and poll timeout, defaulting if 0

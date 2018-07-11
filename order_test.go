@@ -33,7 +33,7 @@ func TestClient_NewOrder(t *testing.T) {
 }
 
 func TestClient_FetchOrder(t *testing.T) {
-	if _, err := testClient.FetchOrder(testClient.Directory.URL + "/asdasdasd"); err == nil {
+	if _, err := testClient.FetchOrder(testClient.Directory().URL + "/asdasdasd"); err == nil {
 		t.Fatal("expected error, got none")
 	}
 

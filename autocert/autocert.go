@@ -299,7 +299,7 @@ func (m *AutoCert) issueCert(domainName string) (*tls.Certificate, error) {
 	}
 
 	// create a new client if one doesn't exist
-	if m.client.Directory.URL == "" {
+	if m.client.Directory().URL == "" {
 		var err error
 		m.client, err = acme.NewClient(m.getDirectoryURL())
 		if err != nil {

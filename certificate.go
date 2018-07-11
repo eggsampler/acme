@@ -61,7 +61,7 @@ func (c Client) RevokeCertificate(account Account, cert *x509.Certificate, key c
 		kid = account.URL
 	}
 
-	if _, err := c.post(c.Directory.RevokeCert, kid, key, revokeReq, nil, http.StatusOK); err != nil {
+	if _, err := c.post(c.dir.RevokeCert, kid, key, revokeReq, nil, http.StatusOK); err != nil {
 		return err
 	}
 

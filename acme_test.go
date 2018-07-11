@@ -3,6 +3,8 @@ package acme
 import (
 	"net/http"
 	"testing"
+
+	"reflect"
 )
 
 func TestNewClient(t *testing.T) {
@@ -40,5 +42,11 @@ func TestParseLinks(t *testing.T) {
 		if linkURL != currentTest.ExpectedURL {
 			t.Fatalf("%s: links not equal, expected: %s, got: %s", currentTest.Name, currentTest.ExpectedURL, linkURL)
 		}
+	}
+}
+
+func TestClient_Directory(t *testing.T) {
+	if !reflect.DeepEqual(testClient.dir, testClient.Directory()) {
+		t.Fatalf("directory mismatch, expected: %+v, got: %+v", testClient.dir, testClient.Directory())
 	}
 }

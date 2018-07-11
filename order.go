@@ -23,7 +23,7 @@ func (c Client) NewOrder(account Account, identifiers []Identifier) (Order, erro
 		Identifiers: identifiers,
 	}
 	newOrderResp := Order{}
-	resp, err := c.post(c.Directory.NewOrder, account.URL, account.PrivateKey, newOrderReq, &newOrderResp, http.StatusCreated)
+	resp, err := c.post(c.dir.NewOrder, account.URL, account.PrivateKey, newOrderReq, &newOrderResp, http.StatusCreated)
 	if err != nil {
 		return newOrderResp, err
 	}
