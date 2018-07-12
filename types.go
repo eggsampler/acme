@@ -2,6 +2,7 @@ package acme
 
 import (
 	"crypto"
+	"errors"
 	"net/http"
 	"time"
 )
@@ -13,10 +14,6 @@ const (
 	ChallengeTypeTLSALPN01 = "tls-alpn-01"
 	ChallengeTypeTLSSNI01  = "tls-sni-01"
 )
-
-func ValidChallenges() []string {
-	return []string{ChallengeTypeDNS01, ChallengeTypeHTTP01, ChallengeTypeTLSALPN01}
-}
 
 // Constants used for certificate revocation, used for RevokeCertificate
 // More details: https://tools.ietf.org/html/rfc5280#section-5.3.1
@@ -32,6 +29,10 @@ const (
 	ReasonRemoveFromCRL               // 8
 	ReasonPrivilegeWithdrawn          // 9
 	ReasonAaCompromise                // 10
+)
+
+var (
+	ErrUnsupported = errors.New("acme: unsupported")
 )
 
 // Directory object as returned from the client's directory url upon creation of client.
@@ -128,6 +129,8 @@ type Authorization struct {
 	// For convenience access to the provided challenges
 	ChallengeMap   map[string]Challenge `json:"-"`
 	ChallengeTypes []string             `json:"-"`
+
+	URL string `json:"-"`
 }
 
 // Challenge object fetched in an authorization or directly from the challenge url.

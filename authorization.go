@@ -24,6 +24,8 @@ func (c Client) FetchAuthorization(account Account, authURL string) (Authorizati
 		authResp.ChallengeTypes = append(authResp.ChallengeTypes, c.Type)
 	}
 
+	authResp.URL = authURL
+
 	return authResp, nil
 }
 

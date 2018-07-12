@@ -60,7 +60,9 @@ func (c Client) UpdateChallenge(account Account, challenge Challenge) (Challenge
 		return challenge, err
 	}
 
-	challenge.URL = resp.Header.Get("Location")
+	if loc := resp.Header.Get("Location"); loc != "" {
+		challenge.URL = loc
+	}
 	challenge.AuthorizationURL = fetchLink(resp, "up")
 
 	if finished, err := checkUpdatedChallengeStatus(challenge); finished {
@@ -77,12 +79,14 @@ func (c Client) UpdateChallenge(account Account, challenge Challenge) (Challenge
 
 		resp, err := c.get(challenge.URL, &challenge, http.StatusOK)
 		if err != nil {
-			// i dont think it's worth exiting the loop on this error
-			// it could just be connectivity issue thats resolved before the timeout duration
+			// i don't think it's worth exiting the loop on this error
+			// it could just be connectivity issue that's resolved before the timeout duration
 			continue
 		}
 
-		challenge.URL = resp.Header.Get("Location")
+		if loc := resp.Header.Get("Location"); loc != "" {
+			challenge.URL = loc
+		}
 		challenge.AuthorizationURL = fetchLink(resp, "up")
 
 		if finished, err := checkUpdatedChallengeStatus(challenge); finished {

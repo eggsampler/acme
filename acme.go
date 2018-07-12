@@ -137,7 +137,7 @@ func (c Client) get(url string, out interface{}, expectedStatus ...int) (*http.R
 
 // Helper function to perform an http post request and read the body.
 // Will attempt to retry if error is badNonce
-func (c Client) postRaw(isRetry bool, requestURL, keyID string, privateKey crypto.Signer, payload interface{}, out interface{}, expectedStatus []int) (*http.Response, []byte, error) {
+func (c Client) postRaw(retryCount int, requestURL, keyID string, privateKey crypto.Signer, payload interface{}, out interface{}, expectedStatus []int) (*http.Response, []byte, error) {
 	nonce, err := c.nonces.Nonce()
 	if err != nil {
 		return nil, nil, err
@@ -161,21 +161,20 @@ func (c Client) postRaw(isRetry bool, requestURL, keyID string, privateKey crypt
 	defer resp.Body.Close()
 
 	if err := checkError(resp, expectedStatus...); err != nil {
-		if isRetry {
-			// don't attempt to retry if this attempt is the retry
-			return resp, nil, err
-		}
-		acmeErr, ok := err.(Problem)
+		prob, ok := err.(Problem)
 		if !ok {
 			// don't retry for an error we don't know about
 			return resp, nil, err
 		}
-		if !strings.HasSuffix(acmeErr.Type, ":badNonce") {
-			// only retry on a badNonce error
+		if retryCount > 4 {
+			// don't attempt to retry if too many retries
 			return resp, nil, err
 		}
-		// perform the retry
-		return c.postRaw(true, requestURL, keyID, privateKey, payload, out, expectedStatus)
+		if strings.HasSuffix(prob.Type, ":badNonce") {
+			// only retry if error is badNonce
+			return c.postRaw(retryCount+1, requestURL, keyID, privateKey, payload, out, expectedStatus)
+		}
+		return resp, nil, err
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
@@ -188,7 +187,7 @@ func (c Client) postRaw(isRetry bool, requestURL, keyID string, privateKey crypt
 
 // Helper function for performing a http post to an acme resource.
 func (c Client) post(requestURL, keyID string, privateKey crypto.Signer, payload interface{}, out interface{}, expectedStatus ...int) (*http.Response, error) {
-	resp, body, err := c.postRaw(false, requestURL, keyID, privateKey, payload, out, expectedStatus)
+	resp, body, err := c.postRaw(0, requestURL, keyID, privateKey, payload, out, expectedStatus)
 	if err != nil {
 		return resp, err
 	}

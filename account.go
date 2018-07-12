@@ -76,6 +76,10 @@ func (c Client) UpdateAccount(account Account, termsOfServiceAgreed bool, contac
 // AccountKeyChange rolls over an account to a new key.
 // More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.3.6
 func (c Client) AccountKeyChange(account Account, newPrivateKey crypto.Signer) (Account, error) {
+	if c.dir.KeyChange == "" {
+		return account, ErrUnsupported
+	}
+
 	newJwkKeyPub, err := jwkEncode(newPrivateKey.Public())
 	if err != nil {
 		return account, fmt.Errorf("acme: error encoding new private key: %v", err)
