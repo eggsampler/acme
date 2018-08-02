@@ -13,6 +13,7 @@ import (
 
 	"bytes"
 	"crypto"
+	"errors"
 )
 
 const (
@@ -34,15 +35,13 @@ func NewClient(directoryURL string, options ...OptionFunc) (Client, error) {
 	// can be overridden via OptionFunc eg: acme.NewClient(url, WithHTTPTimeout(10 * time.Second))
 	httpClient.Timeout = 60 * time.Second
 
-	ns := &nonceStack{
-		client: httpClient,
-	}
-
 	acmeClient := Client{
 		httpClient: httpClient,
-		nonces:     ns,
+		nonces:     &nonceStack{},
 		retryCount: 5,
 	}
+
+	acmeClient.dir.URL = directoryURL
 
 	for _, opt := range options {
 		if err := opt(&acmeClient); err != nil {
@@ -53,9 +52,6 @@ func NewClient(directoryURL string, options ...OptionFunc) (Client, error) {
 	if _, err := acmeClient.get(directoryURL, &acmeClient.dir, http.StatusOK); err != nil {
 		return acmeClient, err
 	}
-
-	acmeClient.dir.URL = directoryURL
-	ns.newNonceURL = acmeClient.dir.NewNonce
 
 	return acmeClient, nil
 }
@@ -80,7 +76,7 @@ func (c Client) getPollingDurations() (time.Duration, time.Duration) {
 
 // Helper function to have a central point for performing http requests.
 // Stores any returned nonces in the stack.
-func (c Client) do(req *http.Request) (*http.Response, error) {
+func (c Client) do(req *http.Request, addNonce bool) (*http.Response, error) {
 	// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-6.1
 	// identifier for this client, as well as the default go user agent
 	if c.userAgentSuffix != "" {
@@ -98,7 +94,9 @@ func (c Client) do(req *http.Request) (*http.Response, error) {
 		return resp, err
 	}
 
-	c.nonces.push(resp.Header.Get("Replay-Nonce"))
+	if addNonce {
+		c.nonces.push(resp.Header.Get("Replay-Nonce"))
+	}
 
 	return resp, nil
 }
@@ -110,7 +108,7 @@ func (c Client) getRaw(url string, expectedStatus ...int) (*http.Response, []byt
 		return nil, nil, fmt.Errorf("acme: error creating request: %v", err)
 	}
 
-	resp, err := c.do(req)
+	resp, err := c.do(req, true)
 	if err != nil {
 		return resp, nil, fmt.Errorf("acme: error fetching response: %v", err)
 	}
@@ -144,10 +142,34 @@ func (c Client) get(url string, out interface{}, expectedStatus ...int) (*http.R
 	return resp, nil
 }
 
+func (c Client) nonce() (string, error) {
+	nonce := c.nonces.pop()
+	if nonce != "" {
+		return nonce, nil
+	}
+
+	if c.dir.NewNonce == "" {
+		return "", errors.New("acme: no new nonce url")
+	}
+
+	req, err := http.NewRequest("HEAD", c.dir.NewNonce, nil)
+	if err != nil {
+		return "", fmt.Errorf("acme: error creating new nonce request: %v", err)
+	}
+
+	resp, err := c.do(req, false)
+	if err != nil {
+		return "", fmt.Errorf("acme: error fetching new nonce: %v", err)
+	}
+
+	nonce = resp.Header.Get("Replay-Nonce")
+	return nonce, nil
+}
+
 // Helper function to perform an http post request and read the body.
 // Will attempt to retry if error is badNonce
 func (c Client) postRaw(retryCount int, requestURL, keyID string, privateKey crypto.Signer, payload interface{}, out interface{}, expectedStatus []int) (*http.Response, []byte, error) {
-	nonce, err := c.nonces.Nonce()
+	nonce, err := c.nonce()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -163,7 +185,7 @@ func (c Client) postRaw(retryCount int, requestURL, keyID string, privateKey cry
 	}
 	req.Header.Set("Content-Type", "application/jose+json")
 
-	resp, err := c.do(req)
+	resp, err := c.do(req, true)
 	if err != nil {
 		return resp, nil, fmt.Errorf("acme: error sending request: %v", err)
 	}
