@@ -41,10 +41,11 @@ func NewClient(directoryURL string, options ...OptionFunc) (Client, error) {
 	acmeClient := Client{
 		httpClient: httpClient,
 		nonces:     ns,
+		retryCount: 5,
 	}
 
 	for _, opt := range options {
-		if err := opt(acmeClient); err != nil {
+		if err := opt(&acmeClient); err != nil {
 			return acmeClient, fmt.Errorf("acme: error setting option: %v", err)
 		}
 	}
@@ -82,7 +83,15 @@ func (c Client) getPollingDurations() (time.Duration, time.Duration) {
 func (c Client) do(req *http.Request) (*http.Response, error) {
 	// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-6.1
 	// identifier for this client, as well as the default go user agent
-	req.Header.Set("User-Agent", userAgentString)
+	if c.userAgentSuffix != "" {
+		req.Header.Set("User-Agent", userAgentString+" "+c.userAgentSuffix)
+	} else {
+		req.Header.Set("User-Agent", userAgentString)
+	}
+
+	if c.acceptLanguage != "" {
+		req.Header.Set("Accept-Language", c.acceptLanguage)
+	}
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -166,7 +175,7 @@ func (c Client) postRaw(retryCount int, requestURL, keyID string, privateKey cry
 			// don't retry for an error we don't know about
 			return resp, nil, err
 		}
-		if retryCount > 4 {
+		if retryCount >= c.retryCount {
 			// don't attempt to retry if too many retries
 			return resp, nil, err
 		}

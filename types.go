@@ -61,9 +61,12 @@ type Directory struct {
 // Client structure to interact with an ACME server.
 // This is typically how most, if not all, of the communication between the client and server occurs.
 type Client struct {
-	httpClient *http.Client
-	nonces     *nonceStack
-	dir        Directory
+	httpClient      *http.Client
+	nonces          *nonceStack
+	dir             Directory
+	userAgentSuffix string
+	acceptLanguage  string
+	retryCount      int
 
 	// The amount of total time the Client will wait at most for a challenge to be updated or a certificate to be issued.
 	// Default 30 seconds if duration is not set or if set to 0.
