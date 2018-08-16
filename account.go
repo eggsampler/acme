@@ -38,6 +38,8 @@ func (c Client) NewAccount(privateKey crypto.Signer, onlyReturnExisting, termsOf
 		}
 	}
 
+	// Shouldn't be necessary anymore, but kept just in case
+	// https://github.com/letsencrypt/boulder/pull/3811
 	if account.Status == "" {
 		if _, err := c.post(account.URL, account.URL, privateKey, struct{}{}, &account, http.StatusOK); err != nil {
 			return account, fmt.Errorf("acme: error fetching existing account information: %v", err)
@@ -80,17 +82,17 @@ func (c Client) AccountKeyChange(account Account, newPrivateKey crypto.Signer) (
 		return account, ErrUnsupported
 	}
 
-	newJwkKeyPub, err := jwkEncode(newPrivateKey.Public())
+	oldJwkKeyPub, err := jwkEncode(account.PrivateKey.Public())
 	if err != nil {
 		return account, fmt.Errorf("acme: error encoding new private key: %v", err)
 	}
 
 	keyChangeReq := struct {
 		Account string          `json:"account"`
-		NewKey  json.RawMessage `json:"newKey"`
+		OldKey  json.RawMessage `json:"oldKey"`
 	}{
 		Account: account.URL,
-		NewKey:  []byte(newJwkKeyPub),
+		OldKey:  []byte(oldJwkKeyPub),
 	}
 
 	innerJws, err := jwsEncodeJSON(keyChangeReq, newPrivateKey, c.dir.KeyChange, "", "")
