@@ -16,7 +16,6 @@ const (
 )
 
 // Constants used for certificate revocation, used for RevokeCertificate
-// More details: https://tools.ietf.org/html/rfc5280#section-5.3.1
 const (
 	ReasonUnspecified          = iota // 0
 	ReasonKeyCompromise               // 1
@@ -36,7 +35,6 @@ var (
 )
 
 // Directory object as returned from the client's directory url upon creation of client.
-// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.1.1
 type Directory struct {
 	NewNonce   string `json:"newNonce"`   // url to new nonce endpoint
 	NewAccount string `json:"newAccount"` // url to new account endpoint
@@ -46,7 +44,6 @@ type Directory struct {
 	KeyChange  string `json:"keyChange"`  // url to key change endpoint
 
 	// meta object containing directory metadata
-	// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-9.7.6
 	Meta struct {
 		TermsOfService          string   `json:"termsOfService"`
 		Website                 string   `json:"website"`
@@ -78,7 +75,6 @@ type Client struct {
 }
 
 // Account structure representing fields in an account object.
-// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.1.2
 type Account struct {
 	Status               string   `json:"status"`
 	Contact              []string `json:"contact"`
@@ -98,14 +94,12 @@ type Account struct {
 }
 
 // Identifier object used in order and authorization objects
-// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.1.3
 type Identifier struct {
 	Type  string `json:"type"`
 	Value string `json:"value"`
 }
 
 // Order object returned when fetching or creating a new order.
-// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.1.3
 type Order struct {
 	Status         string       `json:"status"`
 	Expires        time.Time    `json:"expires"`
@@ -121,7 +115,6 @@ type Order struct {
 }
 
 // Authorization object returned when fetching an authorization in an order.
-// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.1.4
 type Authorization struct {
 	Identifier Identifier  `json:"identifier"`
 	Status     string      `json:"status"`
@@ -137,7 +130,6 @@ type Authorization struct {
 }
 
 // Challenge object fetched in an authorization or directly from the challenge url.
-// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-8
 type Challenge struct {
 	Type      string  `json:"type"`
 	URL       string  `json:"url"`
@@ -154,7 +146,6 @@ type Challenge struct {
 }
 
 // OrderList of challenge objects.
-// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.1.2.1
 type OrderList struct {
 	Orders []string `json:"orders"`
 

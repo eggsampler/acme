@@ -8,7 +8,6 @@ import (
 )
 
 // Problem represents an error returned by an acme server.
-// More details: https://tools.ietf.org/html/rfc7807
 type Problem struct {
 	Status int `json:"status"`
 

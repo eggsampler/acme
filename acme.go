@@ -27,7 +27,6 @@ const (
 )
 
 // NewClient creates a new acme client given a valid directory url.
-// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.1.1
 func NewClient(directoryURL string, options ...OptionFunc) (Client, error) {
 	httpClient := http.DefaultClient
 
@@ -77,7 +76,6 @@ func (c Client) getPollingDurations() (time.Duration, time.Duration) {
 // Helper function to have a central point for performing http requests.
 // Stores any returned nonces in the stack.
 func (c Client) do(req *http.Request, addNonce bool) (*http.Response, error) {
-	// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-6.1
 	// identifier for this client, as well as the default go user agent
 	if c.userAgentSuffix != "" {
 		req.Header.Set("User-Agent", userAgentString+" "+c.userAgentSuffix)

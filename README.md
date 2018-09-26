@@ -4,7 +4,7 @@
 
 ## About
 
-`eggsampler/acme` is a Go client library implementation for [ACME v2 revision 10](https://tools.ietf.org/html/draft-ietf-acme-acme-10), specifically for use with the [Let's Encrypt](https://letsencrypt.org/) service. 
+`eggsampler/acme` is a Go client library implementation for [ACME](https://datatracker.ietf.org/doc/draft-ietf-acme-acme/), specifically for use with the [Let's Encrypt](https://letsencrypt.org/) service. 
 
 The library is designed to provide a wrapper over exposed directory endpoints and provide objects in easy to use structures.
 

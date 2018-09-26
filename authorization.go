@@ -3,7 +3,6 @@ package acme
 import "net/http"
 
 // FetchAuthorization fetches an authorization from an authorization url provided in an order.
-// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.5
 func (c Client) FetchAuthorization(account Account, authURL string) (Authorization, error) {
 	authResp := Authorization{}
 	_, err := c.post(authURL, account.URL, account.PrivateKey, "", &authResp, http.StatusOK)
@@ -30,7 +29,6 @@ func (c Client) FetchAuthorization(account Account, authURL string) (Authorizati
 }
 
 // DeactivateAuthorization deactivate a provided authorization url from an order.
-// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.5.2
 func (c Client) DeactivateAuthorization(account Account, authURL string) (Authorization, error) {
 	deactivateReq := struct {
 		Status string `json:"status"`

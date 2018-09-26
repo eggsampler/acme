@@ -10,7 +10,6 @@ import (
 )
 
 // NewAccount registers a new account with the acme service
-// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.3
 func (c Client) NewAccount(privateKey crypto.Signer, onlyReturnExisting, termsOfServiceAgreed bool, contact ...string) (Account, error) {
 	newAccountReq := struct {
 		OnlyReturnExisting   bool     `json:"onlyReturnExisting"`
@@ -50,7 +49,6 @@ func (c Client) NewAccount(privateKey crypto.Signer, onlyReturnExisting, termsOf
 }
 
 // UpdateAccount updates an existing account with the acme service.
-// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.3.2
 func (c Client) UpdateAccount(account Account, termsOfServiceAgreed bool, contact ...string) (Account, error) {
 	updateAccountReq := struct {
 		TermsOfServiceAgreed bool     `json:"termsOfServiceAgreed"`
@@ -76,7 +74,6 @@ func (c Client) UpdateAccount(account Account, termsOfServiceAgreed bool, contac
 }
 
 // AccountKeyChange rolls over an account to a new key.
-// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.3.6
 func (c Client) AccountKeyChange(account Account, newPrivateKey crypto.Signer) (Account, error) {
 	if c.dir.KeyChange == "" {
 		return account, ErrUnsupported
@@ -110,7 +107,6 @@ func (c Client) AccountKeyChange(account Account, newPrivateKey crypto.Signer) (
 }
 
 // DeactivateAccount deactivates a given account.
-// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.3.7
 func (c Client) DeactivateAccount(account Account) (Account, error) {
 	deactivateReq := struct {
 		Status string `json:"status"`

@@ -15,7 +15,6 @@ import (
 )
 
 // NewOrder initiates a new order for a new certificate.
-// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.4
 func (c Client) NewOrder(account Account, identifiers []Identifier) (Order, error) {
 	newOrderReq := struct {
 		Identifiers []Identifier `json:"identifiers"`
@@ -59,7 +58,6 @@ func (c Client) FetchOrder(account Account, orderURL string) (Order, error) {
 }
 
 // Helper function to determine whether an order is "finished" by it's status.
-// More info: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.4
 func checkFinalizedOrderStatus(order Order) (bool, error) {
 	switch order.Status {
 	case "invalid":
@@ -101,7 +99,6 @@ func checkFinalizedOrderStatus(order Order) (bool, error) {
 
 // FinalizeOrder indicates to the acme server that the client considers an order complete and "finalizes" it.
 // If the server believes the authorizations have been filled successfully, a certificate should then be available.
-// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.4
 // This function assumes that the order status is "ready".
 func (c Client) FinalizeOrder(account Account, order Order, csr *x509.CertificateRequest) (Order, error) {
 	finaliseReq := struct {

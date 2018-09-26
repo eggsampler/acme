@@ -10,7 +10,6 @@ import (
 )
 
 // FetchCertificates downloads a certificate chain from a url given in an order certificate.
-// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.4.2
 func (c Client) FetchCertificates(certificateURL string) ([]*x509.Certificate, error) {
 	resp, raw, err := c.getRaw(certificateURL, http.StatusOK)
 	if err != nil {
@@ -46,7 +45,6 @@ func (c Client) FetchCertificates(certificateURL string) ([]*x509.Certificate, e
 }
 
 // RevokeCertificate revokes a given certificate given the certificate key or account key, and a reason.
-// More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.6
 func (c Client) RevokeCertificate(account Account, cert *x509.Certificate, key crypto.Signer, reason int) error {
 	revokeReq := struct {
 		Certificate string `json:"certificate"`
