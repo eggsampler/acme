@@ -49,11 +49,11 @@ func (c Client) NewOrderDomains(account Account, domains ...string) (Order, erro
 }
 
 // FetchOrder fetches an existing order given an order url.
-func (c Client) FetchOrder(orderURL string) (Order, error) {
+func (c Client) FetchOrder(account Account, orderURL string) (Order, error) {
 	orderResp := Order{
 		URL: orderURL, // boulder response doesn't seem to contain location header for this request
 	}
-	_, err := c.get(orderURL, &orderResp, http.StatusOK)
+	_, err := c.post(orderURL, account.URL, account.PrivateKey, "", &orderResp, http.StatusOK)
 
 	return orderResp, err
 }
@@ -129,7 +129,7 @@ func (c Client) FinalizeOrder(account Account, order Order, csr *x509.Certificat
 		}
 		time.Sleep(pollInterval)
 
-		if _, err := c.get(order.URL, &order, http.StatusOK); err != nil {
+		if _, err := c.post(order.URL, account.URL, account.PrivateKey, "", &order, http.StatusOK); err != nil {
 			// i dont think it's worth exiting the loop on this error
 			// it could just be connectivity issue thats resolved before the timeout duration
 			continue

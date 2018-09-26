@@ -33,13 +33,13 @@ func TestClient_NewOrder(t *testing.T) {
 }
 
 func TestClient_FetchOrder(t *testing.T) {
-	if _, err := testClient.FetchOrder(testClient.Directory().URL + "/asdasdasd"); err == nil {
+	account, order := makeOrder(t)
+
+	if _, err := testClient.FetchOrder(account, testClient.Directory().URL+"/asdasdasd"); err == nil {
 		t.Fatal("expected error, got none")
 	}
 
-	_, order := makeOrder(t)
-
-	fetchedOrder, err := testClient.FetchOrder(order.URL)
+	fetchedOrder, err := testClient.FetchOrder(account, order.URL)
 	if err != nil {
 		t.Fatalf("unexpected error fetching order: %v", err)
 	}

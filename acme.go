@@ -103,7 +103,7 @@ func (c Client) do(req *http.Request, addNonce bool) (*http.Response, error) {
 
 // Helper function to perform an http get request and read the body.
 func (c Client) getRaw(url string, expectedStatus ...int) (*http.Response, []byte, error) {
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, nil, fmt.Errorf("acme: error creating request: %v", err)
 	}
@@ -179,7 +179,7 @@ func (c Client) postRaw(retryCount int, requestURL, keyID string, privateKey cry
 		return nil, nil, fmt.Errorf("acme: error encoding json payload: %v", err)
 	}
 
-	req, err := http.NewRequest("POST", requestURL, bytes.NewReader(data))
+	req, err := http.NewRequest(http.MethodPost, requestURL, bytes.NewReader(data))
 	if err != nil {
 		return nil, nil, fmt.Errorf("acme: error creating request: %v", err)
 	}

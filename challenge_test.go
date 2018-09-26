@@ -54,7 +54,7 @@ func TestClient_FetchChallenge(t *testing.T) {
 
 	chal := auth.Challenges[0]
 
-	fetchedChal, err := testClient.FetchChallenge(chal.URL)
+	fetchedChal, err := testClient.FetchChallenge(account, chal.URL)
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}

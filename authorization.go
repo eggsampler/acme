@@ -6,7 +6,7 @@ import "net/http"
 // More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.5
 func (c Client) FetchAuthorization(account Account, authURL string) (Authorization, error) {
 	authResp := Authorization{}
-	_, err := c.get(authURL, &authResp, http.StatusOK)
+	_, err := c.post(authURL, account.URL, account.PrivateKey, "", &authResp, http.StatusOK)
 	if err != nil {
 		return authResp, err
 	}

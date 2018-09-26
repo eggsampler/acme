@@ -139,7 +139,7 @@ func makeOrderFinalised(t *testing.T, supportedChalTypes []string, identifiers .
 		}
 	}
 
-	updatedOrder, err := testClient.FetchOrder(order.URL)
+	updatedOrder, err := testClient.FetchOrder(acct, order.URL)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -281,7 +281,7 @@ func newBoulderClient() testClientType {
 func newPebbleClient() testClientType {
 	c, err := NewClient("https://localhost:14000/dir", WithInsecureSkipVerify())
 	if err != nil {
-		panic("error creating boulder test client: " + err.Error())
+		panic("error creating pebble test client: " + err.Error())
 	}
 	return testClientType{
 		Client: c,

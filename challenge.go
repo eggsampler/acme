@@ -49,13 +49,7 @@ func checkUpdatedChallengeStatus(challenge Challenge) (bool, error) {
 // UpdateChallenge responds to a challenge to indicate to the server to complete the challenge.
 // More details: https://tools.ietf.org/html/draft-ietf-acme-acme-10#section-7.5.1
 func (c Client) UpdateChallenge(account Account, challenge Challenge) (Challenge, error) {
-	chalReq := struct {
-		KeyAuthorization string `json:"keyAuthorization"`
-	}{
-		KeyAuthorization: challenge.KeyAuthorization,
-	}
-
-	resp, err := c.post(challenge.URL, account.URL, account.PrivateKey, chalReq, &challenge, http.StatusOK)
+	resp, err := c.post(challenge.URL, account.URL, account.PrivateKey, struct{}{}, &challenge, http.StatusOK)
 	if err != nil {
 		return challenge, err
 	}
@@ -77,7 +71,7 @@ func (c Client) UpdateChallenge(account Account, challenge Challenge) (Challenge
 		}
 		time.Sleep(pollInterval)
 
-		resp, err := c.get(challenge.URL, &challenge, http.StatusOK)
+		resp, err := c.post(challenge.URL, account.URL, account.PrivateKey, "", &challenge, http.StatusOK)
 		if err != nil {
 			// i don't think it's worth exiting the loop on this error
 			// it could just be connectivity issue that's resolved before the timeout duration
@@ -96,9 +90,9 @@ func (c Client) UpdateChallenge(account Account, challenge Challenge) (Challenge
 }
 
 // FetchChallenge fetches an existing challenge from the given url.
-func (c Client) FetchChallenge(challengeURL string) (Challenge, error) {
+func (c Client) FetchChallenge(account Account, challengeURL string) (Challenge, error) {
 	challenge := Challenge{}
-	resp, err := c.get(challengeURL, &challenge, http.StatusOK)
+	resp, err := c.post(challengeURL, account.URL, account.PrivateKey, "", &challenge, http.StatusOK)
 	if err != nil {
 		return challenge, err
 	}
