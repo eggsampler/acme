@@ -11,6 +11,12 @@ import (
 
 // NewAccount registers a new account with the acme service
 func (c Client) NewAccount(privateKey crypto.Signer, onlyReturnExisting, termsOfServiceAgreed bool, contact ...string) (Account, error) {
+	if contact == nil {
+		// workaround for json marshalling {"contact":null}
+		contact = []string{}
+		// should now be {"contact":[]}
+	}
+
 	newAccountReq := struct {
 		OnlyReturnExisting   bool     `json:"onlyReturnExisting"`
 		TermsOfServiceAgreed bool     `json:"termsOfServiceAgreed"`
@@ -50,6 +56,12 @@ func (c Client) NewAccount(privateKey crypto.Signer, onlyReturnExisting, termsOf
 
 // UpdateAccount updates an existing account with the acme service.
 func (c Client) UpdateAccount(account Account, termsOfServiceAgreed bool, contact ...string) (Account, error) {
+	if contact == nil {
+		// workaround for json marshalling {"contact":null}
+		contact = []string{}
+		// should now be {"contact":[]}
+	}
+
 	updateAccountReq := struct {
 		TermsOfServiceAgreed bool     `json:"termsOfServiceAgreed"`
 		Contact              []string `json:"contact"`
