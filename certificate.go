@@ -10,8 +10,8 @@ import (
 )
 
 // FetchCertificates downloads a certificate chain from a url given in an order certificate.
-func (c Client) FetchCertificates(certificateURL string) ([]*x509.Certificate, error) {
-	resp, raw, err := c.getRaw(certificateURL, http.StatusOK)
+func (c Client) FetchCertificates(account Account, certificateURL string) ([]*x509.Certificate, error) {
+	resp, body, err := c.postRaw(0, certificateURL, account.URL, account.PrivateKey, "", []int{http.StatusOK})
 	if err != nil {
 		return nil, err
 	}
@@ -19,7 +19,7 @@ func (c Client) FetchCertificates(certificateURL string) ([]*x509.Certificate, e
 	var certs []*x509.Certificate
 	for {
 		var p *pem.Block
-		p, raw = pem.Decode(raw)
+		p, body = pem.Decode(body)
 		if p == nil {
 			break
 		}
@@ -32,7 +32,7 @@ func (c Client) FetchCertificates(certificateURL string) ([]*x509.Certificate, e
 
 	up := fetchLink(resp, "up")
 	if up != "" {
-		upCerts, err := c.FetchCertificates(up)
+		upCerts, err := c.FetchCertificates(account, up)
 		if err != nil {
 			return certs, fmt.Errorf("acme: error fetching up cert: %v", err)
 		}

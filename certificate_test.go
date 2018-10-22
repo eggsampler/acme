@@ -3,11 +3,11 @@ package acme
 import "testing"
 
 func TestClient_FetchCertificates(t *testing.T) {
-	_, order, _ := makeOrderFinalised(t, nil)
+	account, order, _ := makeOrderFinalised(t, nil)
 	if order.Certificate == "" {
 		t.Fatalf("no certificate: %+v", order)
 	}
-	certs, err := testClient.FetchCertificates(order.Certificate)
+	certs, err := testClient.FetchCertificates(account, order.Certificate)
 	if err != nil {
 		t.Fatalf("expeceted no error, got: %v", err)
 	}
@@ -27,7 +27,7 @@ func TestClient_RevokeCertificate(t *testing.T) {
 	if order.Certificate == "" {
 		t.Fatalf("no certificate: %+v", order)
 	}
-	certs, err := testClient.FetchCertificates(order.Certificate)
+	certs, err := testClient.FetchCertificates(account, order.Certificate)
 	if err != nil {
 		t.Fatalf("expeceted no error, got: %v", err)
 	}
@@ -42,7 +42,7 @@ func TestClient_RevokeCertificate2(t *testing.T) {
 	if order.Certificate == "" {
 		t.Fatalf("no certificate: %+v", order)
 	}
-	certs, err := testClient.FetchCertificates(order.Certificate)
+	certs, err := testClient.FetchCertificates(account, order.Certificate)
 	if err != nil {
 		t.Fatalf("expeceted no error, got: %v", err)
 	}

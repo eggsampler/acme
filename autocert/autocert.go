@@ -389,7 +389,7 @@ func (m *AutoCert) issueCert(domainName string) (*tls.Certificate, error) {
 	}
 
 	// fetch the certificate chain from the finalized order provided by the acme server
-	certs, err := m.client.FetchCertificates(order.Certificate)
+	certs, err := m.client.FetchCertificates(account, order.Certificate)
 	if err != nil {
 		return nil, fmt.Errorf("autocert: error fetching order certificates for %s: %v", domainName, err)
 	}

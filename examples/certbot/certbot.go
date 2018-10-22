@@ -194,7 +194,7 @@ func main() {
 
 	// fetch the certificate chain from the finalized order provided by the acme server
 	log.Printf("Fetching certificate: %s", order.Certificate)
-	certs, err := client.FetchCertificates(order.Certificate)
+	certs, err := client.FetchCertificates(account, order.Certificate)
 	if err != nil {
 		log.Fatalf("Error fetching order certificates: %v", err)
 	}

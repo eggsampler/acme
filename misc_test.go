@@ -4,9 +4,9 @@ import "testing"
 
 func TestWildcard(t *testing.T) {
 	d := "*." + randString() + ".com"
-	_, order, _ := makeOrderFinalised(t, []string{ChallengeTypeDNS01}, Identifier{Type: "dns", Value: d})
+	account, order, _ := makeOrderFinalised(t, []string{ChallengeTypeDNS01}, Identifier{Type: "dns", Value: d})
 
-	certs, err := testClient.FetchCertificates(order.Certificate)
+	certs, err := testClient.FetchCertificates(account, order.Certificate)
 	if err != nil {
 		t.Fatalf("error fetch cert: %v", err)
 	}

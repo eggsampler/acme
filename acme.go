@@ -166,7 +166,7 @@ func (c Client) nonce() (string, error) {
 
 // Helper function to perform an http post request and read the body.
 // Will attempt to retry if error is badNonce
-func (c Client) postRaw(retryCount int, requestURL, keyID string, privateKey crypto.Signer, payload interface{}, out interface{}, expectedStatus []int) (*http.Response, []byte, error) {
+func (c Client) postRaw(retryCount int, requestURL, keyID string, privateKey crypto.Signer, payload interface{}, expectedStatus []int) (*http.Response, []byte, error) {
 	nonce, err := c.nonce()
 	if err != nil {
 		return nil, nil, err
@@ -201,7 +201,7 @@ func (c Client) postRaw(retryCount int, requestURL, keyID string, privateKey cry
 		}
 		if strings.HasSuffix(prob.Type, ":badNonce") {
 			// only retry if error is badNonce
-			return c.postRaw(retryCount+1, requestURL, keyID, privateKey, payload, out, expectedStatus)
+			return c.postRaw(retryCount+1, requestURL, keyID, privateKey, payload, expectedStatus)
 		}
 		return resp, nil, err
 	}
@@ -216,7 +216,7 @@ func (c Client) postRaw(retryCount int, requestURL, keyID string, privateKey cry
 
 // Helper function for performing a http post to an acme resource.
 func (c Client) post(requestURL, keyID string, privateKey crypto.Signer, payload interface{}, out interface{}, expectedStatus ...int) (*http.Response, error) {
-	resp, body, err := c.postRaw(0, requestURL, keyID, privateKey, payload, out, expectedStatus)
+	resp, body, err := c.postRaw(0, requestURL, keyID, privateKey, payload, expectedStatus)
 	if err != nil {
 		return resp, err
 	}
