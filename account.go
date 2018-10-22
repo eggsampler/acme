@@ -43,14 +43,6 @@ func (c Client) NewAccount(privateKey crypto.Signer, onlyReturnExisting, termsOf
 		}
 	}
 
-	// Shouldn't be necessary anymore, but kept just in case
-	// https://github.com/letsencrypt/boulder/pull/3811
-	if account.Status == "" {
-		if _, err := c.post(account.URL, account.URL, privateKey, struct{}{}, &account, http.StatusOK); err != nil {
-			return account, fmt.Errorf("acme: error fetching existing account information: %v", err)
-		}
-	}
-
 	return account, nil
 }
 
