@@ -91,7 +91,7 @@ func makeOrder(t *testing.T, identifiers ...Identifier) (Account, Order) {
 
 func makeOrderFinalised(t *testing.T, supportedChalTypes []string, identifiers ...Identifier) (Account, Order, crypto.Signer) {
 	if len(supportedChalTypes) == 0 {
-		supportedChalTypes = []string{ChallengeTypeDNS01, ChallengeTypeHTTP01, ChallengeTypeTLSALPN01}
+		supportedChalTypes = []string{ChallengeTypeDNS01, ChallengeTypeHTTP01}
 	}
 
 	acct, order := makeOrder(t, identifiers...)
