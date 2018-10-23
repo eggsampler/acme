@@ -18,11 +18,6 @@ func TestClient_FetchAuthorization(t *testing.T) {
 }
 
 func TestClient_DeactivateAuthorization(t *testing.T) {
-	if testClient.server == "pebble" {
-		// pebble doesn't support deactivating auths
-		return
-	}
-
 	account, order := makeOrder(t)
 
 	auth, err := testClient.DeactivateAuthorization(account, order.Authorizations[0])
