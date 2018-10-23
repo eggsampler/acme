@@ -116,11 +116,6 @@ func TestClient_UpdateAccount2(t *testing.T) {
 }
 
 func TestClient_AccountKeyChange(t *testing.T) {
-	if testClient.server == "pebble" {
-		// pebble does not support key changes at this time
-		return
-	}
-
 	account := makeAccount(t)
 	newKey := makePrivateKey(t)
 	accountNewKey, err := testClient.AccountKeyChange(account, newKey)
