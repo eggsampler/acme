@@ -28,6 +28,4 @@ By default, tests run using the boulder client unless the environment variable `
 
 Alternatively, tests can be run against a local instance of [pebble](https://github.com/letsencrypt/pebble) running with the `PEBBLE_VA_ALWAYS_VALID=1` environment variable.
 
-Currently pebble does not support account key changes or deactivating authorizations, so these tests are disabled.
-
 To run tests using the pebble client the environment variable `ACME_SERVER` must be set to `pebble`, eg: `ACME_SERVER=pebble go test -v`
