@@ -1,0 +1,14 @@
+sudo: required
+
+language: go
+
+go:
+  - "1.x"
+
+services:
+  - docker
+
+script:
+  - export TRAVIS_GO_VERSION=`gimme -r ${TRAVIS_GO_VERSION}`
+  - make pebble
+  - make boulder
