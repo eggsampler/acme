@@ -1,6 +1,6 @@
 # eggsampler/acme
 
-[![GoDoc](https://godoc.org/github.com/eggsampler/acme?status.svg)](https://godoc.org/github.com/eggsampler/acme)
+[![GoDoc](https://godoc.org/github.com/eggsampler/acme?status.svg)](https://godoc.org/github.com/eggsampler/acme) [![Build Status](https://travis-ci.com/eggsampler/acme.svg?branch=master)](https://travis-ci.com/eggsampler/acme) [![codecov.io](https://codecov.io/gh/eggsampler/acme/branch/master/graph/badge.svg)](https://codecov.io/gh/eggsampler/acme/branch/master)
 
 ## About
 
