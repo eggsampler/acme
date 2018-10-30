@@ -1,9 +1,9 @@
-sudo: required
-
 language: go
 
 go:
-  - "1.x"
+- "1.x"
+
+sudo: required
 
 services:
   - docker
@@ -12,3 +12,6 @@ script:
   - export TRAVIS_GO_VERSION=`gimme -r ${TRAVIS_GO_VERSION}`
   - make pebble
   - make boulder
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)

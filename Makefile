@@ -19,7 +19,7 @@ pebble_wait:
 
 # tests the code against a running pebble instance
 pebble_test:
-	ACME_SERVER=pebble GOCACHE=off go test github.com/eggsampler/acme
+	ACME_SERVER=pebble GOCACHE=off go test -race -coverprofile=coverage_pebble.txt -covermode=atomic github.com/eggsampler/acme
 
 # stops the running pebble instance
 pebble_stop:
@@ -29,6 +29,7 @@ pebble_stop:
 
 boulder: boulder_setup boulder_start boulder_wait boulder_test boulder_stop
 
+# NB: this edits test/startservers.py and docker-compose.yml
 boulder_setup:
 	mkdir -p BOULDER_PATH
 	git clone --depth 1 https://github.com/letsencrypt/boulder.git $(BOULDER_PATH) 2> /dev/null \
@@ -37,7 +38,6 @@ boulder_setup:
 	sed -i -e 's/test\/config$$/test\/config-next/' $(BOULDER_PATH)/docker-compose.yml
 
 # runs an instance of boulder
-# NB: this edits test/startservers.py and docker-compose.yml
 boulder_start:
 	docker-compose -f $(BOULDER_PATH)/docker-compose.yml up -d
 
@@ -47,7 +47,7 @@ boulder_wait:
 
 # tests the code against a running boulder instance
 boulder_test:
-	ACME_SERVER=boulder GOCACHE=off go test github.com/eggsampler/acme
+	ACME_SERVER=boulder GOCACHE=off go test -race -coverprofile=coverage_boulder.txt -covermode=atomic github.com/eggsampler/acme
 
 # stops the running docker instance
 boulder_stop:
