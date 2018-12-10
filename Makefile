@@ -1,40 +1,48 @@
 
-.PHONY: pebble pebble_start pebble_wait pebble_test pebble_stop boulder boulder_setup boulder_start boulder_test boulder_stop
+.PHONY: test pebble pebble_setup pebble_start pebble_wait pebble_stop boulder boulder_setup boulder_start boulder_stop
 
 
 GOPATH ?= $(HOME)/go
 BOULDER_PATH ?= $(GOPATH)/src/github.com/letsencrypt/boulder
-PEBBLE_TAG ?= 2018-10-10
+PEBBLE_PATH ?= $(GOPATH)/src/github.com/letsencrypt/pebble
 
 
-pebble: pebble_start pebble_wait pebble_test pebble_stop
+# tests the code against a running ca instance
+test:
+	$(eval COVERAGE = coverage_$(strip $(shell ls coverage* 2>/dev/null | wc -l)).txt)
+	GOCACHE=off go test -race -coverprofile=$(COVERAGE) -covermode=atomic github.com/eggsampler/acme/...
+
+clean:
+	rm -f coverage_*.txt
+
+
+pebble: pebble_setup pebble_start pebble_wait test pebble_stop
+
+pebble_setup:
+	mkdir -p $(PEBBLE_PATH)
+	git clone --depth 1 https://github.com/letsencrypt/pebble.git $(PEBBLE_PATH) 2> /dev/null \
+		|| (cd $(PEBBLE_PATH); git reset --hard HEAD && git pull -q)
 
 # runs an instance of pebble using docker
 pebble_start:
-	docker run -d --name pebble -p 14000:14000 -e "PEBBLE_VA_ALWAYS_VALID=1" letsencrypt/pebble:$(PEBBLE_TAG) pebble -strict
+	docker-compose -f $(PEBBLE_PATH)/docker-compose.yml up -d
 
 # waits until pebble responds
 pebble_wait:
 	while ! wget --delete-after -q --no-check-certificate "https://localhost:14000/dir" ; do sleep 1 ; done
 
-# tests the code against a running pebble instance
-pebble_test:
-	ACME_SERVER=pebble GOCACHE=off go test -race -coverprofile=coverage_pebble.txt -covermode=atomic github.com/eggsampler/acme
-
 # stops the running pebble instance
 pebble_stop:
-	docker stop pebble
-	-docker rm pebble
+	docker-compose -f $(PEBBLE_PATH)/docker-compose.yml down
 
 
-boulder: boulder_setup boulder_start boulder_wait boulder_test boulder_stop
+boulder: boulder_setup boulder_start boulder_wait test boulder_stop
 
-# NB: this edits test/startservers.py and docker-compose.yml
+# NB: this edits docker-compose.yml
 boulder_setup:
-	mkdir -p BOULDER_PATH
+	mkdir -p $(BOULDER_PATH)
 	git clone --depth 1 https://github.com/letsencrypt/boulder.git $(BOULDER_PATH) 2> /dev/null \
 		|| (cd $(BOULDER_PATH); git reset --hard HEAD && git pull -q)
-	sed -i -e 's/--http01 ""/--http01 :5002/' $(BOULDER_PATH)/test/startservers.py
 	sed -i -e 's/test\/config$$/test\/config-next/' $(BOULDER_PATH)/docker-compose.yml
 
 # runs an instance of boulder
@@ -44,10 +52,6 @@ boulder_start:
 # waits until boulder responds
 boulder_wait:
 	while ! wget --delete-after -q --no-check-certificate "http://localhost:4001/directory" ; do sleep 1 ; done
-
-# tests the code against a running boulder instance
-boulder_test:
-	ACME_SERVER=boulder GOCACHE=off go test -race -coverprofile=coverage_boulder.txt -covermode=atomic github.com/eggsampler/acme
 
 # stops the running docker instance
 boulder_stop:

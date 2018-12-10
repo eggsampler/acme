@@ -32,8 +32,8 @@ func TestClient_UpdateChallenge(t *testing.T) {
 
 	chal := auth.ChallengeMap[ChallengeTypeDNS01]
 
-	testClient.preChallenge(auth, chal)
-	defer testClient.postChallenge(auth, chal)
+	preChallenge(auth, chal)
+	defer postChallenge(auth, chal)
 
 	updatedChal, err := testClient.UpdateChallenge(account, chal)
 	if err != nil {

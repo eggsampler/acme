@@ -10,6 +10,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/json"
 	"fmt"
+	"log"
 	mrand "math/rand"
 	"net/http"
 	"os"
@@ -17,27 +18,62 @@ import (
 	"time"
 )
 
-type testClientType struct {
-	Client
-	server        string
-	preChallenge  func(auth Authorization, chal Challenge)
-	postChallenge func(auth Authorization, chal Challenge)
-}
-
 var (
-	testClient testClientType
+	testClient Client
 )
 
 func init() {
 	mrand.Seed(time.Now().UnixNano())
-	if os.Getenv("ACME_SERVER") == "pebble" {
-		testClient = newPebbleClient()
-	} else {
-		testClient = newBoulderClient()
+	var err error
+
+	// attempt to use manually supplied directory url first
+	if dir := os.Getenv("ACME_DIRECTORY"); dir != "" {
+		var opts []OptionFunc
+
+		if os.Getenv("ACME_STRICT") == "" {
+			opts = append(opts, WithInsecureSkipVerify())
+		}
+
+		testClient, err = NewClient(dir, opts...)
+		if err != nil {
+			panic("error creating manual test client at '" + dir + "' - " + err.Error())
+		}
+		return
 	}
-	if testClient.Directory().NewAccount == "" {
-		panic("error creating new client: no new account url provided")
+
+	directories := []struct {
+		DirectoryURL string
+		DefaultIPv4  string
+	}{
+		{
+			"https://localhost:14000/dir", // pebble
+			"10.30.50.3",
+		},
+
+		{
+			"https://localhost:4431/directory", // boulder https
+			"127.0.0.1",
+		},
+		{
+			"http://localhost:4001/directory", // boulder non-https
+			"127.0.0.1",
+		},
 	}
+
+	for _, d := range directories {
+		testClient, err = NewClient(d.DirectoryURL, WithInsecureSkipVerify())
+		if err != nil {
+			log.Printf("error creating client for %s - %v", d.DirectoryURL, err)
+			continue
+		}
+
+		doPost("set-default-ipv4", map[string]string{"ip": d.DefaultIPv4})
+
+		log.Printf("using directory at: %s", d.DirectoryURL)
+		return
+	}
+
+	panic("no acme ca available")
 }
 
 func randString() string {
@@ -126,8 +162,8 @@ func makeOrderFinalised(t *testing.T, supportedChalTypes []string, identifiers .
 			t.Fatalf("unexpected status %q on challenge: %+v", chal.Status, chal)
 		}
 
-		testClient.preChallenge(auth, chal)
-		defer testClient.postChallenge(auth, chal)
+		preChallenge(auth, chal)
+		defer postChallenge(auth, chal)
 
 		updatedChal, err := testClient.UpdateChallenge(acct, chal)
 		if err != nil {
@@ -191,106 +227,81 @@ func makeCSR(t *testing.T, domains []string) (*x509.CertificateRequest, crypto.S
 	return csr, privKey
 }
 
-func newBoulderClient() testClientType {
-	c, err := NewClient("http://localhost:4001/directory")
+func doPost(name string, req interface{}) {
+	reqJSON, err := json.Marshal(req)
 	if err != nil {
-		panic("error creating boulder test client: " + err.Error())
+		panic(fmt.Sprintf("error marshalling boulder %s: %v", name, err))
 	}
-	doPost := func(name string, req interface{}) {
-		reqJSON, err := json.Marshal(req)
-		if err != nil {
-			panic(fmt.Sprintf("error marshalling boulder %s: %v", name, err))
-		}
-		if _, err := http.Post("http://localhost:8055/"+name, "application/json", bytes.NewReader(reqJSON)); err != nil {
-			panic(fmt.Sprintf("error posting boulder %s: %v", name, err))
-		}
-	}
-	return testClientType{
-		Client: c,
-		server: "boulder",
-		preChallenge: func(auth Authorization, chal Challenge) {
-			switch chal.Type {
-			case ChallengeTypeDNS01:
-				setReq := struct {
-					Host  string `json:"host"`
-					Value string `json:"value"`
-				}{
-					Host:  "_acme-challenge." + auth.Identifier.Value + ".",
-					Value: EncodeDNS01KeyAuthorization(chal.KeyAuthorization),
-				}
-				doPost("set-txt", setReq)
-
-			case ChallengeTypeHTTP01:
-				addReq := struct {
-					Token   string `json:"token"`
-					Content string `json:"content"`
-				}{
-					Token:   chal.Token,
-					Content: chal.KeyAuthorization,
-				}
-				doPost("add-http01", addReq)
-
-			case ChallengeTypeTLSALPN01:
-				addReq := struct {
-					Host    string `json:"host"`
-					Content string `json:"content"`
-				}{
-					Host:    auth.Identifier.Value,
-					Content: chal.KeyAuthorization,
-				}
-				doPost("add-tlsalpn01", addReq)
-
-			default:
-				panic("pre: unsupported challenge type: " + chal.Type)
-			}
-		},
-		postChallenge: func(auth Authorization, chal Challenge) {
-			switch chal.Type {
-			case ChallengeTypeDNS01:
-				host := "_acme-challenge." + auth.Identifier.Value + "."
-				clearReq := struct {
-					Host string `json:"host"`
-				}{
-					Host: host,
-				}
-				doPost("clear-txt", clearReq)
-
-			case ChallengeTypeHTTP01:
-				delReq := struct {
-					Token string `json:"token"`
-				}{
-					Token: chal.Token,
-				}
-				doPost("del-http01", delReq)
-
-			case ChallengeTypeTLSALPN01:
-				delReq := struct {
-					Host string `json:"token"`
-				}{
-					Host: auth.Identifier.Value,
-				}
-				doPost("del-tlsalpn01", delReq)
-
-			default:
-				panic("post: unsupported challenge type: " + chal.Type)
-			}
-		},
+	if _, err := http.Post("http://localhost:8055/"+name, "application/json", bytes.NewReader(reqJSON)); err != nil {
+		panic(fmt.Sprintf("error posting boulder %s: %v", name, err))
 	}
 }
 
-func newPebbleClient() testClientType {
-	c, err := NewClient("https://localhost:14000/dir", WithInsecureSkipVerify())
-	if err != nil {
-		panic("error creating pebble test client: " + err.Error())
+func preChallenge(auth Authorization, chal Challenge) {
+	switch chal.Type {
+	case ChallengeTypeDNS01:
+		setReq := struct {
+			Host  string `json:"host"`
+			Value string `json:"value"`
+		}{
+			Host:  "_acme-challenge." + auth.Identifier.Value + ".",
+			Value: EncodeDNS01KeyAuthorization(chal.KeyAuthorization),
+		}
+		doPost("set-txt", setReq)
+
+	case ChallengeTypeHTTP01:
+		addReq := struct {
+			Token   string `json:"token"`
+			Content string `json:"content"`
+		}{
+			Token:   chal.Token,
+			Content: chal.KeyAuthorization,
+		}
+		doPost("add-http01", addReq)
+
+	case ChallengeTypeTLSALPN01:
+		addReq := struct {
+			Host    string `json:"host"`
+			Content string `json:"content"`
+		}{
+			Host:    auth.Identifier.Value,
+			Content: chal.KeyAuthorization,
+		}
+		doPost("add-tlsalpn01", addReq)
+
+	default:
+		panic("pre: unsupported challenge type: " + chal.Type)
 	}
-	return testClientType{
-		Client: c,
-		server: "pebble",
-		preChallenge: func(auth Authorization, chal Challenge) {
+}
 
-		},
-		postChallenge: func(auth Authorization, chal Challenge) {
+func postChallenge(auth Authorization, chal Challenge) {
+	switch chal.Type {
+	case ChallengeTypeDNS01:
+		host := "_acme-challenge." + auth.Identifier.Value + "."
+		clearReq := struct {
+			Host string `json:"host"`
+		}{
+			Host: host,
+		}
+		doPost("clear-txt", clearReq)
 
-		},
+	case ChallengeTypeHTTP01:
+		delReq := struct {
+			Token string `json:"token"`
+		}{
+			Token: chal.Token,
+		}
+		doPost("del-http01", delReq)
+
+	case ChallengeTypeTLSALPN01:
+		delReq := struct {
+			Host string `json:"token"`
+		}{
+			Host: auth.Identifier.Value,
+		}
+		doPost("del-tlsalpn01", delReq)
+
+	default:
+		panic("post: unsupported challenge type: " + chal.Type)
 	}
 }

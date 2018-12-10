@@ -16,16 +16,10 @@ An example of how to use the autocert package is also provided in examples/autoc
 
 ## Tests
 
-### Boulder
+The tests can be run against an instance of [boulder](https://github.com/letsencrypt/boulder) (running the `config-next` configuration) or [pebble](https://github.com/letsencrypt/pebble).
 
-Tests can be run against a local instance of [boulder](https://github.com/letsencrypt/boulder) running the `config-next` configuration.
+Challenge fulfilment is designed to use the new `challtestsrv` server present inside boulder and pebble which responds to dns queries and challenges as required.
 
-This needs to have the `chaltestsrv` responding to http01 challenges. This is currently disabled by default and can be enabled by editing `test/startservers.py` and ensure `chaltestsrv` is running with the flag `--http01 :5002` instead of `--http01 ""`
+To run tests against an already running instance of boulder or pebble, use the `test` target in the Makefile.
 
-By default, tests run using the boulder client unless the environment variable `ACME_SERVER` is set to `pebble`, eg: `ACME_SERVER=boulder go test -v`
-
-### Pebble
-
-Alternatively, tests can be run against a local instance of [pebble](https://github.com/letsencrypt/pebble) running with the `PEBBLE_VA_ALWAYS_VALID=1` environment variable.
-
-To run tests using the pebble client the environment variable `ACME_SERVER` must be set to `pebble`, eg: `ACME_SERVER=pebble go test -v`
+Some convenience targets for launching pebble/boulder using their respective docker compose files have also been included in the Makefile.
