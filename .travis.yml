@@ -10,6 +10,7 @@ services:
 
 script:
   - export TRAVIS_GO_VERSION=`gimme -r ${TRAVIS_GO_VERSION}`
+  - make clean
   - make pebble
   - make boulder
 
