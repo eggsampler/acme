@@ -3,6 +3,7 @@ package autocert
 // Similar to golang.org/x/crypto/acme/autocert
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -24,7 +25,7 @@ import (
 // HostCheck function prototype to implement for checking hosts against before issuing certificates
 type HostCheck func(host string) error
 
-// WhitelistHosts implememts a simple whitelist HostCheck
+// WhitelistHosts implements a simple whitelist HostCheck
 func WhitelistHosts(hosts ...string) HostCheck {
 	m := map[string]bool{}
 	for _, v := range hosts {
@@ -42,8 +43,11 @@ func WhitelistHosts(hosts ...string) HostCheck {
 // AutoCert is a stateful certificate manager for issuing certificates on connecting hosts
 type AutoCert struct {
 	// Acme directory Url
-	// If nil, uses `acme.LETSENCRYPT_STAGING`
+	// If nil, uses `acme.LetsEncryptStaging`
 	DirectoryURL string
+
+	// Options contains the options used for creating the acme client
+	Options []acme.OptionFunc
 
 	// A function to check whether a host is allowed or not
 	// If nil, all hosts allowed
@@ -56,6 +60,9 @@ type AutoCert struct {
 
 	// When using a staging environment, include a root certificate for verification purposes
 	RootCert string
+
+	// Called before updating challenges
+	PreUpdateChallengeHook func(acme.Account, acme.Challenge)
 
 	// Mapping of token -> keyauth
 	// Protected by a mutex, but not rwmutex because tokens are deleted once read
@@ -163,18 +170,20 @@ func (m *AutoCert) getCache(keys ...string) []byte {
 	}
 
 	b, _ = ioutil.ReadFile(path.Join(m.CacheDir, key))
-	if len(b) > 0 {
-		if m.cache == nil {
-			m.cache = map[string][]byte{}
-		}
-		m.cache[key] = b
-		return b
+	if len(b) == 0 {
+		return nil
 	}
 
-	return nil
+	if m.cache == nil {
+		m.cache = map[string][]byte{}
+	}
+	m.cache[key] = b
+	return b
 }
 
-func (m *AutoCert) putCache(data []byte, keys ...string) {
+func (m *AutoCert) putCache(data []byte, keys ...string) context.Context {
+	ctx, cancel := context.WithCancel(context.Background())
+
 	key := strings.Join(keys, "-")
 
 	m.cacheLock.Lock()
@@ -185,9 +194,17 @@ func (m *AutoCert) putCache(data []byte, keys ...string) {
 	}
 	m.cache[key] = data
 
-	if m.CacheDir != "" {
-		go ioutil.WriteFile(path.Join(m.CacheDir, key), data, 0700)
+	if m.CacheDir == "" {
+		cancel()
+		return ctx
 	}
+
+	go func() {
+		ioutil.WriteFile(path.Join(m.CacheDir, key), data, 0700)
+		cancel()
+	}()
+
+	return ctx
 }
 
 func (m *AutoCert) checkHost(name string) error {
@@ -301,7 +318,7 @@ func (m *AutoCert) issueCert(domainName string) (*tls.Certificate, error) {
 	// create a new client if one doesn't exist
 	if m.client.Directory().URL == "" {
 		var err error
-		m.client, err = acme.NewClient(m.getDirectoryURL())
+		m.client, err = acme.NewClient(m.getDirectoryURL(), m.Options...)
 		if err != nil {
 			return nil, err
 		}
@@ -342,6 +359,10 @@ func (m *AutoCert) issueCert(domainName string) (*tls.Certificate, error) {
 		m.tokens[chal.Token] = []byte(chal.KeyAuthorization)
 		m.tokensLock.Unlock()
 
+		if m.PreUpdateChallengeHook != nil {
+			m.PreUpdateChallengeHook(account, chal)
+		}
+
 		chal, err = m.client.UpdateChallenge(account, chal)
 		if err != nil {
 			return nil, fmt.Errorf("autocert: error updating authorization %s challenge (Url: %s) : %v", auth.Identifier.Value, authURL, err)
@@ -372,6 +393,7 @@ func (m *AutoCert) issueCert(domainName string) (*tls.Certificate, error) {
 		PublicKeyAlgorithm: x509.ECDSA,
 		PublicKey:          certKey.Public(),
 		Subject:            pkix.Name{CommonName: domainName},
+		DNSNames:           []string{domainName},
 	}
 	csrDer, err := x509.CreateCertificateRequest(rand.Reader, tpl, certKey)
 	if err != nil {
