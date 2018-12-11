@@ -1,19 +1,19 @@
-package autocert
+package acme
 
 import (
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"reflect"
 	"strings"
 	"testing"
-
-	"github.com/eggsampler/acme"
 )
 
 func TestWhitelistHosts(t *testing.T) {
@@ -95,7 +95,7 @@ func TestAutoCert_GetCertificate(t *testing.T) {
 
 func TestAutoCert_getDirectoryURL(t *testing.T) {
 	ac := AutoCert{}
-	if dir := ac.getDirectoryURL(); dir != acme.LetsEncryptStaging {
+	if dir := ac.getDirectoryURL(); dir != LetsEncryptStaging {
 		t.Fatalf("Expected staging url, got: %s", dir)
 	}
 	ac.DirectoryURL = "blah"
@@ -153,20 +153,57 @@ func TestAutoCert_getExistingCert(t *testing.T) {
 	}
 }
 
-func TestAutoCert_GetCertificate2(t *testing.T) {
+func fetchRoot() []byte {
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 	httpClient := &http.Client{Transport: tr}
-	resp, err := httpClient.Get("https://localhost:14000/root")
-	if err != nil {
-		t.Fatalf("error fetching root cert: %v", err)
+
+	getBody := func(rootURL string) []byte {
+		resp, err := httpClient.Get(rootURL)
+		if err != nil {
+			return nil
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			return nil
+		}
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil
+		}
+		ct := resp.Header.Get("Content-Type")
+		switch ct {
+		case "application/pem-certificate-chain":
+			return body
+		case "application/pkix-cert":
+			return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: body})
+		}
+		panic(rootURL + " unsupported content type: " + ct)
 	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+
+	baseURL, err := url.Parse(testClient.Directory().URL)
 	if err != nil {
-		t.Fatalf("error reading root cert: %v", err)
+		panic(err)
 	}
+
+	urls := []string{
+		fmt.Sprintf("%s://%s/root", baseURL.Scheme, baseURL.Host),
+		fmt.Sprintf("%s://%s/acme/issuer-cert", baseURL.Scheme, baseURL.Host),
+	}
+
+	for _, u := range urls {
+		if root := getBody(u); len(root) > 0 {
+			return root
+		}
+	}
+
+	panic("no root certificate")
+}
+
+func TestAutoCert_GetCertificate2(t *testing.T) {
+
+	root := fetchRoot()
 
 	doPost := func(name string, req interface{}) {
 		reqJSON, err := json.Marshal(req)
@@ -179,10 +216,10 @@ func TestAutoCert_GetCertificate2(t *testing.T) {
 	}
 
 	ac := AutoCert{
-		DirectoryURL: "https://localhost:14000/dir",
-		Options:      []acme.OptionFunc{acme.WithInsecureSkipVerify()},
-		RootCert:     string(body),
-		PreUpdateChallengeHook: func(account acme.Account, challenge acme.Challenge) {
+		DirectoryURL: testClient.Directory().URL,
+		Options:      []OptionFunc{WithInsecureSkipVerify()},
+		RootCert:     string(root),
+		PreUpdateChallengeHook: func(account Account, challenge Challenge) {
 			addReq := struct {
 				Token   string `json:"token"`
 				Content string `json:"content"`

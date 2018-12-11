@@ -1,4 +1,4 @@
-package autocert
+package acme
 
 // Similar to golang.org/x/crypto/acme/autocert
 
@@ -18,8 +18,6 @@ import (
 	"path"
 	"strings"
 	"sync"
-
-	"github.com/eggsampler/acme"
 )
 
 // HostCheck function prototype to implement for checking hosts against before issuing certificates
@@ -43,11 +41,11 @@ func WhitelistHosts(hosts ...string) HostCheck {
 // AutoCert is a stateful certificate manager for issuing certificates on connecting hosts
 type AutoCert struct {
 	// Acme directory Url
-	// If nil, uses `acme.LetsEncryptStaging`
+	// If nil, uses `LetsEncryptStaging`
 	DirectoryURL string
 
 	// Options contains the options used for creating the acme client
-	Options []acme.OptionFunc
+	Options []OptionFunc
 
 	// A function to check whether a host is allowed or not
 	// If nil, all hosts allowed
@@ -62,7 +60,7 @@ type AutoCert struct {
 	RootCert string
 
 	// Called before updating challenges
-	PreUpdateChallengeHook func(acme.Account, acme.Challenge)
+	PreUpdateChallengeHook func(Account, Challenge)
 
 	// Mapping of token -> keyauth
 	// Protected by a mutex, but not rwmutex because tokens are deleted once read
@@ -77,7 +75,7 @@ type AutoCert struct {
 	// write lock around issuing new certificate
 	certLock sync.RWMutex
 
-	client acme.Client
+	client Client
 }
 
 // HTTPHandler Wraps a handler and provides serving of http-01 challenge tokens from /.well-known/acme-challenge/
@@ -151,7 +149,7 @@ func (m *AutoCert) getDirectoryURL() string {
 		return m.DirectoryURL
 	}
 
-	return acme.LetsEncryptStaging
+	return LetsEncryptStaging
 }
 
 func (m *AutoCert) getCache(keys ...string) []byte {
@@ -318,7 +316,7 @@ func (m *AutoCert) issueCert(domainName string) (*tls.Certificate, error) {
 	// create a new client if one doesn't exist
 	if m.client.Directory().URL == "" {
 		var err error
-		m.client, err = acme.NewClient(m.getDirectoryURL(), m.Options...)
+		m.client, err = NewClient(m.getDirectoryURL(), m.Options...)
 		if err != nil {
 			return nil, err
 		}
@@ -347,7 +345,7 @@ func (m *AutoCert) issueCert(domainName string) (*tls.Certificate, error) {
 			continue
 		}
 
-		chal, ok := auth.ChallengeMap[acme.ChallengeTypeHTTP01]
+		chal, ok := auth.ChallengeMap[ChallengeTypeHTTP01]
 		if !ok {
 			return nil, fmt.Errorf("autocert: unable to find http-01 challenge for auth %s, Url: %s", auth.Identifier.Value, authURL)
 		}
