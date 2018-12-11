@@ -7,6 +7,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
+	"mime"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -172,14 +173,17 @@ func fetchRoot() []byte {
 		if err != nil {
 			return nil
 		}
-		ct := resp.Header.Get("Content-Type")
-		switch ct {
+		mediaType, _, err := mime.ParseMediaType(resp.Header.Get("Content-Type"))
+		if err != nil {
+			panic(err)
+		}
+		switch mediaType {
 		case "application/pem-certificate-chain":
 			return body
 		case "application/pkix-cert":
 			return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: body})
 		}
-		panic(rootURL + " unsupported content type: " + ct)
+		panic(rootURL + " unsupported content type: " + mediaType)
 	}
 
 	baseURL, err := url.Parse(testClient.Directory().URL)
