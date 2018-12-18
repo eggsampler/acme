@@ -41,35 +41,20 @@ func init() {
 		return
 	}
 
-	directories := []struct {
-		DirectoryURL string
-		DefaultIPv4  string
-	}{
-		{
-			"https://localhost:14000/dir", // pebble
-			"10.30.50.3",
-		},
-
-		{
-			"https://localhost:4431/directory", // boulder https
-			"127.0.0.1",
-		},
-		{
-			"http://localhost:4001/directory", // boulder non-https
-			"127.0.0.1",
-		},
+	directories := []string{
+		"https://localhost:14000/dir",      // pebble
+		"https://localhost:4431/directory", // boulder https
+		"http://localhost:4001/directory",  // boulder non-https
 	}
 
 	for _, d := range directories {
-		testClient, err = NewClient(d.DirectoryURL, WithInsecureSkipVerify())
+		testClient, err = NewClient(d, WithInsecureSkipVerify())
 		if err != nil {
-			log.Printf("error creating client for %s - %v", d.DirectoryURL, err)
+			log.Printf("error creating client for %s - %v", d, err)
 			continue
 		}
 
-		doPost("set-default-ipv4", map[string]string{"ip": d.DefaultIPv4})
-
-		log.Printf("using directory at: %s", d.DirectoryURL)
+		log.Printf("using directory at: %s", d)
 		return
 	}
 
