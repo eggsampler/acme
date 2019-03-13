@@ -5,12 +5,14 @@
 GOPATH ?= $(HOME)/go
 BOULDER_PATH ?= $(GOPATH)/src/github.com/letsencrypt/boulder
 PEBBLE_PATH ?= $(GOPATH)/src/github.com/letsencrypt/pebble
+TEST_PATH ?= github.com/eggsampler/acme/...
 
 
 # tests the code against a running ca instance
 test:
 	$(eval COVERAGE = coverage_$(strip $(shell ls coverage* 2>/dev/null | wc -l)).txt)
-	GOCACHE=off go test -race -coverprofile=$(COVERAGE) -covermode=atomic github.com/eggsampler/acme/...
+	go clean -testcache
+	go test -race -coverprofile=$(COVERAGE) -covermode=atomic $(TEST_PATH)
 
 clean:
 	rm -f coverage_*.txt
