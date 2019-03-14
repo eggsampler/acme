@@ -218,13 +218,13 @@ func main() {
 func loadAccount(client acme.Client) (acme.Account, error) {
 	raw, err := ioutil.ReadFile(accountFile)
 	if err != nil {
-		return acme.Account{}, err
-	}
-	var accountFile acmeAccountFile
-	if err := json.Unmarshal(raw, &accountFile); err != nil {
 		return acme.Account{}, fmt.Errorf("error reading account file %q: %v", accountFile, err)
 	}
-	account, err := client.UpdateAccount(acme.Account{PrivateKey: accountFile.PrivateKey, URL: accountFile.Url}, true, getContacts()...)
+	var aaf acmeAccountFile
+	if err := json.Unmarshal(raw, &aaf); err != nil {
+		return acme.Account{}, fmt.Errorf("error parsing account file %q: %v", accountFile, err)
+	}
+	account, err := client.UpdateAccount(acme.Account{PrivateKey: aaf.PrivateKey, URL: aaf.Url}, true, getContacts()...)
 	if err != nil {
 		return acme.Account{}, fmt.Errorf("error updating existing account: %v", err)
 	}
