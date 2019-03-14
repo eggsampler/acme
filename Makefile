@@ -11,7 +11,7 @@ TEST_PATH ?= github.com/eggsampler/acme/...
 # tests the code against a running ca instance
 test:
 	$(eval COVERAGE = coverage_$(strip $(shell ls coverage* 2>/dev/null | wc -l)).txt)
-	go clean -testcache
+	-go clean -testcache
 	go test -race -coverprofile=$(COVERAGE) -covermode=atomic $(TEST_PATH)
 
 clean:
