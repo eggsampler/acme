@@ -63,3 +63,46 @@ func TestClient_FetchChallenge(t *testing.T) {
 		t.Fatalf("tokens different")
 	}
 }
+
+func Test_checkUpdatedChallengeStatus(t *testing.T) {
+	tests := []struct {
+		Status   string
+		Finished bool
+		HasError bool
+	}{
+		{
+			Status: "pending",
+		},
+		{
+			Status: "processing",
+		},
+		{
+			Status:   "valid",
+			Finished: true,
+		},
+		{
+			Status:   "invalid",
+			Finished: true,
+			HasError: true,
+		},
+		{
+			Status:   "blah",
+			Finished: true,
+			HasError: true,
+		},
+	}
+	for _, ct := range tests {
+		finished, err := checkUpdatedChallengeStatus(Challenge{
+			Status: ct.Status,
+		})
+		if ct.Finished != finished {
+			t.Fatalf("Finished mismatch on status %s, expected: %t got: %t", ct.Status, ct.Finished, finished)
+		}
+		if ct.HasError && err == nil {
+			t.Fatalf("status %s expected error, got none", ct.Status)
+		}
+		if !ct.HasError && err != nil {
+			t.Fatalf("status %s expected no error, got: %v", ct.Status, err)
+		}
+	}
+}
