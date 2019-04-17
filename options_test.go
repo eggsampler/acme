@@ -2,6 +2,7 @@ package acme
 
 import (
 	"net/http"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -68,5 +69,21 @@ func TestWithUserAgentSuffix(t *testing.T) {
 	}
 	if suffix != acmeClient.userAgentSuffix {
 		t.Fatalf("user agent suffix not set, expected %v, got %v", suffix, acmeClient.userAgentSuffix)
+	}
+}
+
+func TestWithHTTPClient(t *testing.T) {
+	acmeClient := Client{}
+	opt1 := WithHTTPClient(nil)
+	if err := opt1(&acmeClient); err == nil {
+		t.Fatal("expected error, got none")
+	}
+	opt2 := WithHTTPClient(http.DefaultClient)
+	suffix := &http.Client{}
+	if err := opt2(&acmeClient); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if reflect.TypeOf(suffix).Kind() != reflect.TypeOf(acmeClient.httpClient).Kind() {
+		t.Fatalf("http client suffix not set, expected %v, got %v", suffix, acmeClient.httpClient)
 	}
 }

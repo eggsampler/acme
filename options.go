@@ -46,12 +46,25 @@ func WithAcceptLanguage(acceptLanguage string) OptionFunc {
 	}
 }
 
+// WithRetryCount sets the number of times the acme client retries when receiving an api error (eg, nonce failures, etc).
+// Default: 5
 func WithRetryCount(retryCount int) OptionFunc {
 	return func(client *Client) error {
 		if retryCount < 1 {
 			return errors.New("retryCount must be > 0")
 		}
 		client.retryCount = retryCount
+		return nil
+	}
+}
+
+// WithHTTPClient Allows setting a custom http client for acme connections
+func WithHTTPClient(httpClient *http.Client) OptionFunc {
+	return func(client *Client) error {
+		if httpClient == nil {
+			return errors.New("client must not be nil")
+		}
+		client.httpClient = httpClient
 		return nil
 	}
 }
