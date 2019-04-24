@@ -13,7 +13,7 @@ func TestNewClient(t *testing.T) {
 	}
 }
 
-func TestParseLinks(t *testing.T) {
+func TestFetchLink(t *testing.T) {
 	linkTests := []struct {
 		Name        string
 		LinkHeaders []string
@@ -41,6 +41,56 @@ func TestParseLinks(t *testing.T) {
 		linkURL := fetchLink(&http.Response{Header: http.Header{"Link": currentTest.LinkHeaders}}, currentTest.WantedLink)
 		if linkURL != currentTest.ExpectedURL {
 			t.Fatalf("%s: links not equal, expected: %s, got: %s", currentTest.Name, currentTest.ExpectedURL, linkURL)
+		}
+	}
+}
+
+func stringSliceEqual(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := 0; i < len(a); i++ {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func TestFetchLinks(t *testing.T) {
+	linkTests := []struct {
+		Name         string
+		LinkHeaders  []string
+		WantedLink   string
+		ExpectedURLs []string
+	}{
+		{
+			Name:         "no links",
+			WantedLink:   "fail",
+			ExpectedURLs: nil,
+		},
+		{Name: "joined links",
+			LinkHeaders:  []string{`<https://url/path>; rel="next", <http://url/path?query>; rel="up"`},
+			WantedLink:   "up",
+			ExpectedURLs: []string{"http://url/path?query"},
+		},
+		{
+			Name:         "separate links",
+			LinkHeaders:  []string{`<https://url/path>; rel="next"`, `<http://url/path?query>; rel="up"`},
+			WantedLink:   "up",
+			ExpectedURLs: []string{"http://url/path?query"},
+		},
+		{
+			Name:         "multiple links",
+			LinkHeaders:  []string{`<https://url/path>; rel="up"`, `<http://url/path?query>; rel="up"`},
+			WantedLink:   "up",
+			ExpectedURLs: []string{"https://url/path", "http://url/path?query"},
+		},
+	}
+	for _, currentTest := range linkTests {
+		linkURLs := fetchLinks(&http.Response{Header: http.Header{"Link": currentTest.LinkHeaders}}, currentTest.WantedLink)
+		if !stringSliceEqual(linkURLs, currentTest.ExpectedURLs) {
+			t.Fatalf("%s: links not equal, expected: %s, got: %s", currentTest.Name, currentTest.ExpectedURLs, linkURLs)
 		}
 	}
 }
