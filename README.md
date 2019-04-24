@@ -4,19 +4,19 @@
 
 ## About
 
-`eggsampler/acme` is a Go client library implementation for [ACME](https://datatracker.ietf.org/doc/draft-ietf-acme-acme/), specifically for use with the [Let's Encrypt](https://letsencrypt.org/) service. 
+`eggsampler/acme` is a Go client library implementation for [RFC8555](https://tools.ietf.org/html/rfc8555) (previously ACME), specifically for use with the [Let's Encrypt](https://letsencrypt.org/) service. 
 
-The library is designed to provide a wrapper over exposed directory endpoints and provide objects in easy to use structures.
+The library is designed to provide a zero external dependency wrapper over exposed directory endpoints and provide objects in easy to use structures.
 
 ## Example
 
-A simple [certbot](https://certbot.eff.org/)-like example is provided in the examples/certbot directory. This code demonstrates account registation, new order submission, fulfilling challenges, finalising an order and fetching the issued certificate chain.
+A simple [certbot](https://certbot.eff.org/)-like example is provided in the examples/certbot directory. This code demonstrates account registration, new order submission, fulfilling challenges, finalising an order and fetching the issued certificate chain.
 
 An example of how to use the autocert package is also provided in examples/autocert.
 
 ## Tests
 
-The tests can be run against an instance of [boulder](https://github.com/letsencrypt/boulder) (running the `config-next` configuration) or [pebble](https://github.com/letsencrypt/pebble).
+The tests can be run against an instance of [boulder](https://github.com/letsencrypt/boulder) or [pebble](https://github.com/letsencrypt/pebble).
 
 Challenge fulfilment is designed to use the new `challtestsrv` server present inside boulder and pebble which responds to dns queries and challenges as required.
 
