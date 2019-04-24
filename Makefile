@@ -22,8 +22,8 @@ pebble: pebble_setup pebble_start pebble_wait test pebble_stop
 
 pebble_setup:
 	mkdir -p $(PEBBLE_PATH)
-	git clone --depth 1 https://github.com/letsencrypt/pebble.git $(PEBBLE_PATH) 2> /dev/null \
-		|| (cd $(PEBBLE_PATH); git reset --hard HEAD && git pull -q)
+	git clone --depth 1 https://github.com/letsencrypt/pebble.git $(PEBBLE_PATH) \
+		|| (cd $(PEBBLE_PATH); git checkout -f master && git reset --hard HEAD && git pull -q)
 
 # runs an instance of pebble using docker
 pebble_start:
@@ -43,9 +43,8 @@ boulder: boulder_setup boulder_start boulder_wait test boulder_stop
 # NB: this edits docker-compose.yml
 boulder_setup:
 	mkdir -p $(BOULDER_PATH)
-	git clone --depth 1 https://github.com/letsencrypt/boulder.git $(BOULDER_PATH) 2> /dev/null \
-		|| (cd $(BOULDER_PATH); git reset --hard HEAD && git pull -q)
-	sed -i -e 's/test\/config$$/test\/config-next/' $(BOULDER_PATH)/docker-compose.yml
+	git clone --depth 1 https://github.com/letsencrypt/boulder.git $(BOULDER_PATH) \
+		|| (cd $(BOULDER_PATH); git checkout -f master && git reset --hard HEAD && git pull -q)
 
 # runs an instance of boulder
 boulder_start:
