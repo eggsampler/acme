@@ -1,4 +1,4 @@
-package certbot
+package main
 
 // An example of the acme library to create a simple certbot-like clone. Takes a few command line parameters and issues
 // a certificate using the http-01 challenge method.
