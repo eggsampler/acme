@@ -2,9 +2,8 @@ package acme
 
 import (
 	"net/http"
-	"testing"
-
 	"reflect"
+	"testing"
 )
 
 func TestNewClient(t *testing.T) {

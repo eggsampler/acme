@@ -1,19 +1,16 @@
 package acme
 
 import (
+	"bytes"
+	"crypto"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"time"
-
 	"regexp"
-
 	"strings"
-
-	"bytes"
-	"crypto"
-	"errors"
+	"time"
 )
 
 const (

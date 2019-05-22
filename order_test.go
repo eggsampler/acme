@@ -1,9 +1,8 @@
 package acme
 
 import (
-	"testing"
-
 	"reflect"
+	"testing"
 )
 
 func TestClient_NewOrder(t *testing.T) {

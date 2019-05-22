@@ -1,12 +1,10 @@
 package acme
 
 import (
-	"net/http"
-
-	"fmt"
-
 	"crypto"
 	"encoding/json"
+	"fmt"
+	"net/http"
 )
 
 // NewAccount registers a new account with the acme service

@@ -1,10 +1,9 @@
 package acme
 
 import (
-	"testing"
-
 	"crypto"
 	"reflect"
+	"testing"
 )
 
 func TestClient_NewAccount(t *testing.T) {
