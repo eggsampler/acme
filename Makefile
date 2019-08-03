@@ -5,7 +5,7 @@
 GOPATH ?= $(HOME)/go
 BOULDER_PATH ?= $(GOPATH)/src/github.com/letsencrypt/boulder
 PEBBLE_PATH ?= $(GOPATH)/src/github.com/letsencrypt/pebble
-TEST_PATH ?= github.com/eggsampler/acme
+TEST_PATH ?= github.com/eggsampler/acme/v2
 
 
 # tests the code against a running ca instance
