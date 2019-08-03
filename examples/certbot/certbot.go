@@ -91,7 +91,7 @@ func main() {
 	webroot = filepath.Join(webroot, ".well-known", "acme-challenge")
 	if _, err := os.Stat(webroot); os.IsNotExist(err) {
 		log.Printf("Making directory path: %s", webroot)
-		if err := os.MkdirAll(webroot, 0644); err != nil {
+		if err := os.MkdirAll(webroot, 0755); err != nil {
 			log.Fatalf("Error creating webroot path %q: %v", webroot, err)
 		}
 	}
