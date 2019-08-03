@@ -13,6 +13,8 @@ script:
   - make clean
   - make pebble
   - make boulder
+  - go build -o /dev/null examples/certbot/certbot.go
+  - go build -o /dev/null examples/autocert/autocert.go
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
