@@ -192,7 +192,7 @@ func fetchRoot() []byte {
 	}
 
 	urls := []string{
-		fmt.Sprintf("%s://%s/root", baseURL.Scheme, baseURL.Host),
+		fmt.Sprintf("%s://%s:%d/roots/0", baseURL.Scheme, baseURL.Hostname(), 15000),
 		fmt.Sprintf("%s://%s/acme/issuer-cert", baseURL.Scheme, baseURL.Host),
 	}
 
