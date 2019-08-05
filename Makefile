@@ -1,5 +1,5 @@
 
-.PHONY: test pebble pebble_setup pebble_start pebble_wait pebble_stop boulder boulder_setup boulder_start boulder_stop
+.PHONY: test clean pebble pebble_setup pebble_start pebble_wait pebble_stop boulder boulder_setup boulder_start boulder_stop
 
 
 GOPATH ?= $(HOME)/go
