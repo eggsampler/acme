@@ -2,7 +2,6 @@ package acme
 
 import (
 	"crypto"
-	"errors"
 	"net/http"
 	"time"
 )
@@ -28,10 +27,6 @@ const (
 	ReasonRemoveFromCRL               // 8
 	ReasonPrivilegeWithdrawn          // 9
 	ReasonAaCompromise                // 10
-)
-
-var (
-	ErrUnsupported = errors.New("acme: unsupported")
 )
 
 // Directory object as returned from the client's directory url upon creation of client.

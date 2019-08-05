@@ -65,10 +65,6 @@ func (c Client) UpdateAccount(account Account, termsOfServiceAgreed bool, contac
 
 // AccountKeyChange rolls over an account to a new key.
 func (c Client) AccountKeyChange(account Account, newPrivateKey crypto.Signer) (Account, error) {
-	if c.dir.KeyChange == "" {
-		return account, ErrUnsupported
-	}
-
 	oldJwkKeyPub, err := jwkEncode(account.PrivateKey.Public())
 	if err != nil {
 		return account, fmt.Errorf("acme: error encoding new private key: %v", err)
