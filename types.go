@@ -71,10 +71,9 @@ type Client struct {
 
 // Account structure representing fields in an account object.
 type Account struct {
-	Status               string   `json:"status"`
-	Contact              []string `json:"contact"`
-	TermsOfServiceAgreed bool     `json:"onlyReturnExisting"`
-	Orders               string   `json:"orders"`
+	Status  string   `json:"status"`
+	Contact []string `json:"contact"`
+	Orders  string   `json:"orders"`
 
 	// Provided by the Location http header when creating a new account or fetching an existing account.
 	URL string `json:"-"`
@@ -99,8 +98,10 @@ type Order struct {
 	Status         string       `json:"status"`
 	Expires        time.Time    `json:"expires"`
 	Identifiers    []Identifier `json:"identifiers"`
-	Authorizations []string     `json:"authorizations"`
+	NotBefore      time.Time    `json:"notBefore"`
+	NotAfter       time.Time    `json:"notAfter"`
 	Error          Problem      `json:"error"`
+	Authorizations []string     `json:"authorizations"`
 	Finalize       string       `json:"finalize"`
 	Certificate    string       `json:"certificate"`
 
