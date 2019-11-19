@@ -39,13 +39,11 @@ func (c Client) NewAccount(privateKey crypto.Signer, onlyReturnExisting, termsOf
 }
 
 // UpdateAccount updates an existing account with the acme service.
-func (c Client) UpdateAccount(account Account, termsOfServiceAgreed bool, contact ...string) (Account, error) {
+func (c Client) UpdateAccount(account Account, contact ...string) (Account, error) {
 	updateAccountReq := struct {
-		TermsOfServiceAgreed bool     `json:"termsOfServiceAgreed"`
-		Contact              []string `json:"contact,omitempty"`
+		Contact []string `json:"contact,omitempty"`
 	}{
-		TermsOfServiceAgreed: termsOfServiceAgreed,
-		Contact:              contact,
+		Contact: contact,
 	}
 
 	_, err := c.post(account.URL, account.URL, account.PrivateKey, updateAccountReq, &account, http.StatusOK)

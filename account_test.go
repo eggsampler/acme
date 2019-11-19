@@ -87,7 +87,7 @@ func TestClient_NewAccount2(t *testing.T) {
 func TestClient_UpdateAccount(t *testing.T) {
 	account := makeAccount(t)
 	contact := []string{"mailto:test@test.com"}
-	updatedAccount, err := testClient.UpdateAccount(account, true, contact...)
+	updatedAccount, err := testClient.UpdateAccount(account, contact...)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -99,7 +99,7 @@ func TestClient_UpdateAccount(t *testing.T) {
 
 func TestClient_UpdateAccount2(t *testing.T) {
 	account := makeAccount(t)
-	updatedAccount, err := testClient.UpdateAccount(Account{PrivateKey: account.PrivateKey, URL: account.URL}, true)
+	updatedAccount, err := testClient.UpdateAccount(Account{PrivateKey: account.PrivateKey, URL: account.URL})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -108,7 +108,7 @@ func TestClient_UpdateAccount2(t *testing.T) {
 		t.Fatalf("account and updated account mismatch, expected: %+v, got: %+v", account, updatedAccount)
 	}
 
-	_, err = testClient.UpdateAccount(Account{PrivateKey: account.PrivateKey}, true)
+	_, err = testClient.UpdateAccount(Account{PrivateKey: account.PrivateKey})
 	if err == nil {
 		t.Fatalf("expected error, got none")
 	}
