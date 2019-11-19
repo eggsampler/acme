@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"reflect"
 )
 
 // NewAccount registers a new account with the acme service
@@ -40,10 +41,19 @@ func (c Client) NewAccount(privateKey crypto.Signer, onlyReturnExisting, termsOf
 
 // UpdateAccount updates an existing account with the acme service.
 func (c Client) UpdateAccount(account Account, contact ...string) (Account, error) {
-	updateAccountReq := struct {
-		Contact []string `json:"contact,omitempty"`
-	}{
-		Contact: contact,
+	var updateAccountReq interface{}
+
+	if !reflect.DeepEqual(account.Contact, contact) {
+		// Only provide a non-nil updateAccountReq when there is an update to be made.
+		updateAccountReq = struct {
+			Contact []string `json:"contact,omitempty"`
+		}{
+			Contact: contact,
+		}
+	} else {
+		// Otherwise use "" to trigger a POST-as-GET to fetch up-to-date account
+		// information from the acme service.
+		updateAccountReq = ""
 	}
 
 	_, err := c.post(account.URL, account.URL, account.PrivateKey, updateAccountReq, &account, http.StatusOK)
