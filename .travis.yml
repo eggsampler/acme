@@ -15,7 +15,9 @@ script:
   - unset TRAVIS_GO_VERSION
   - make clean
   - make pebble
+  - make pebble_stop
   - make boulder
+  - make boulder_stop
   - go build -o /dev/null examples/certbot/certbot.go
   - go build -o /dev/null examples/autocert/autocert.go
 
