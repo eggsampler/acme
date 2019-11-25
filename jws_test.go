@@ -5,19 +5,33 @@
 package acme
 
 import (
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rsa"
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"io"
 	"math/big"
 	"testing"
 )
 
+// The following shell command alias is used in the comments
+// throughout this file:
+// alias b64raw="base64 -w0 | tr -d '=' | tr '/+' '_-'"
+
 const (
+	// Modulus in raw base64:
+	// 4xgZ3eRPkwoRvy7qeRUbmMDe0V-xH9eWLdu0iheeLlrmD2mqWXfP9IeSKApbn34
+	// g8TuAS9g5zhq8ELQ3kmjr-KV86GAMgI6VAcGlq3QrzpTCf_30Ab7-zawrfRaFON
+	// a1HwEzPY1KHnGVkxJc85gNkwYI9SY2RHXtvln3zs5wITNrdosqEXeaIkVYBEhbh
+	// Nu54pp3kxo6TuWLi9e6pXeWetEwmlBwtWZlPoib2j3TxLBksKZfoyFyek380mHg
+	// JAumQ_I2fjj98_97mk3ihOY4AgVdCDj1z_GCoZkG5Rq7nbCGyosyKWyDX00Zs-n
+	// NqVhoLeIvXC4nnWdJMZ6rogxyQQ
 	testKeyPEM = `
 -----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEA4xgZ3eRPkwoRvy7qeRUbmMDe0V+xH9eWLdu0iheeLlrmD2mq
@@ -49,7 +63,7 @@ EQeIP6dZtv8IMgtGIb91QX9pXvP0aznzQKwYIA8nZgoENCPfiMTPiEDT9e/0lObO
 `
 
 	// This thumbprint is for the testKey defined above.
-	testKeyThumbprint = "6nicxzh6WETQlrvdchkz-U3e3DOQZ4heJKU63rfqMqQ"
+	// testKeyThumbprint = "6nicxzh6WETQlrvdchkz-U3e3DOQZ4heJKU63rfqMqQ"
 
 	// openssl ecparam -name secp256k1 -genkey -noout
 	testKeyECPEM = `
@@ -80,7 +94,7 @@ GGnm6rb+NnWR9DIopM0nKNkToWoF/hzopxu4Ae/GsQ==
 `
 	// 1. openssl ec -in key.pem -noout -text
 	// 2. remove first byte, 04 (the header); the rest is X and Y
-	// 3. convert each with: echo <val> | xxd -r -p | base64 -w 100 | tr -d '=' | tr '/+' '_-'
+	// 3. convert each with: echo <val> | xxd -r -p | b64raw
 	testKeyECPubX    = "5lhEug5xK4xBDZ2nAbaxLtaLiv85bxJ7ePd1dkO23HQ"
 	testKeyECPubY    = "4aiK72sBeUAGkv0TaLsmwokYUYyNxGsS5EMIKwsNIKk"
 	testKeyEC384PubX = "MyrY_jLNLx6E1-Xc79_y-WDFzlriOVCkYyYoKWoWAqlw9gQNY9BP9sbeb5T3_oJt"
@@ -89,8 +103,8 @@ GGnm6rb+NnWR9DIopM0nKNkToWoF/hzopxu4Ae/GsQ==
 	testKeyEC512PubY = "AXbmSeogEiDlDwz0Gc670YYByFzC3c7tEMeap7CckkOtuN0Yaebqtv42dZH0MiikzSco2ROhagX-HOinG7gB78ax"
 
 	// echo -n '{"crv":"P-256","kty":"EC","x":"<testKeyECPubX>","y":"<testKeyECPubY>"}' | \
-	// openssl dgst -binary -sha256 | base64 | tr -d '=' | tr '/+' '_-'
-	testKeyECThumbprint = "zedj-Bd1Zshp8KLePv2MB-lJ_Hagp7wAwdkA0NUTniU"
+	// openssl dgst -binary -sha256 | b64raw
+	// testKeyECThumbprint = "zedj-Bd1Zshp8KLePv2MB-lJ_Hagp7wAwdkA0NUTniU"
 )
 
 var (
@@ -134,52 +148,90 @@ func parseEC(s, name string) *ecdsa.PrivateKey {
 }
 
 func TestJWSEncodeJSON(t *testing.T) {
-	tests := []struct {
-		Claim      interface{}
-		RequestURL string
-		KeyID      string
-		Nonce      string
-		Protected  string
-		Payload    string
-		Signature  string
-	}{
-		{
-			Claim:      struct{ Msg string }{Msg: "Hello JWS"},
-			RequestURL: "",
-			KeyID:      "",
-			Nonce:      "nonce",
-			Protected: "eyJhbGciOiJSUzI1NiIsImp3ayI6eyJlIjoiQVFBQiIsImt0eSI6IlJTQSIsIm4iOiI0eGdaM2VSUGt3b1J2eT" +
-				"dxZVJVYm1NRGUwVi14SDllV0xkdTBpaGVlTGxybUQybXFXWGZQOUllU0tBcGJuMzRnOFR1QVM5ZzV6aHE4RUxRM2ttanIt" +
-				"S1Y4NkdBTWdJNlZBY0dscTNRcnpwVENmXzMwQWI3LXphd3JmUmFGT05hMUh3RXpQWTFLSG5HVmt4SmM4NWdOa3dZSTlTWT" +
-				"JSSFh0dmxuM3pzNXdJVE5yZG9zcUVYZWFJa1ZZQkVoYmhOdTU0cHAza3hvNlR1V0xpOWU2cFhlV2V0RXdtbEJ3dFdabFBv" +
-				"aWIyajNUeExCa3NLWmZveUZ5ZWszODBtSGdKQXVtUV9JMmZqajk4Xzk3bWszaWhPWTRBZ1ZkQ0RqMXpfR0NvWmtHNVJxN2" +
-				"5iQ0d5b3N5S1d5RFgwMFpzLW5OcVZob0xlSXZYQzRubldkSk1aNnJvZ3h5UVEifSwibm9uY2UiOiJub25jZSIsInVybCI6IiJ9",
-			Payload: "eyJNc2ciOiJIZWxsbyBKV1MifQ",
-			Signature: "XnfumFVmQrm6mmewxMWbh6k1DQMhzCoo63grIo6RZS6Cfsr2ntAUHmHARvwoTp_tVQp6PbMWYRFjwmUMgLbpau" +
-				"YxrwVMwAQ2cf9T3SJnBcv8zS8lVeYLZ11oS1JAIAVRx2plEktdg5iqckEyn3WipglNeq-WEM7V0GzUYmUzWRCtCVfJw_2_" +
-				"dLzfKrEPx-y_AbOPF95eonII9YCPquawD5RAPxHrsrqbIch3g55DKG0MYwBFmcvZk_22-SaqNOZbIooxjP0xXWxaP6t1sh" +
-				"YLh0K0cFS1fFC96sSvf8lS-1FrDOML994jyGjusFo9yArn4GaxIAy4N8bhO9LezWXZng",
-		},
+	claims := struct{ Msg string }{"Hello JWS"}
+	// JWS signed with testKey and "nonce" as the nonce value
+	// JSON-serialized JWS fields are split for easier testing
+	const (
+		// {"alg":"RS256","jwk":{"e":"AQAB","kty":"RSA","n":"..."},"nonce":"nonce","url":"url"}
+		protected = "eyJhbGciOiJSUzI1NiIsImp3ayI6eyJlIjoiQVFBQiIsImt0eSI6" +
+			"IlJTQSIsIm4iOiI0eGdaM2VSUGt3b1J2eTdxZVJVYm1NRGUwVi14" +
+			"SDllV0xkdTBpaGVlTGxybUQybXFXWGZQOUllU0tBcGJuMzRnOFR1" +
+			"QVM5ZzV6aHE4RUxRM2ttanItS1Y4NkdBTWdJNlZBY0dscTNRcnpw" +
+			"VENmXzMwQWI3LXphd3JmUmFGT05hMUh3RXpQWTFLSG5HVmt4SmM4" +
+			"NWdOa3dZSTlTWTJSSFh0dmxuM3pzNXdJVE5yZG9zcUVYZWFJa1ZZ" +
+			"QkVoYmhOdTU0cHAza3hvNlR1V0xpOWU2cFhlV2V0RXdtbEJ3dFda" +
+			"bFBvaWIyajNUeExCa3NLWmZveUZ5ZWszODBtSGdKQXVtUV9JMmZq" +
+			"ajk4Xzk3bWszaWhPWTRBZ1ZkQ0RqMXpfR0NvWmtHNVJxN25iQ0d5" +
+			"b3N5S1d5RFgwMFpzLW5OcVZob0xlSXZYQzRubldkSk1aNnJvZ3h5" +
+			"UVEifSwibm9uY2UiOiJub25jZSIsInVybCI6InVybCJ9"
+		// {"Msg":"Hello JWS"}
+		payload = "eyJNc2ciOiJIZWxsbyBKV1MifQ"
+		// printf '<protected>.<payload>' | openssl dgst -binary -sha256 -sign testKey | b64raw
+		signature = "YFyl_xz1E7TR-3E1bIuASTr424EgCvBHjt25WUFC2VaDjXYV0Rj_" +
+			"Hd3dJ_2IRqBrXDZZ2n4ZeA_4mm3QFwmwyeDwe2sWElhb82lCZ8iX" +
+			"uFnjeOmSOjx-nWwPa5ibCXzLq13zZ-OBV1Z4oN_TuailQeRoSfA3" +
+			"nO8gG52mv1x2OMQ5MAFtt8jcngBLzts4AyhI6mBJ2w7Yaj3ZCriq" +
+			"DWA3GLFvvHdW1Ba9Z01wtGT2CuZI7DUk_6Qj1b3BkBGcoKur5C9i" +
+			"bUJtCkABwBMvBQNyD3MmXsrRFRTgvVlyU_yMaucYm7nmzEr_2PaQ" +
+			"50rFt_9qOfJ4sfbLtG1Wwae57BQx1g"
+	)
+
+	b, err := jwsEncodeJSON(claims, testKey, noKeyID, "nonce", "url")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var jws struct{ Protected, Payload, Signature string }
+	if err := json.Unmarshal(b, &jws); err != nil {
+		t.Fatal(err)
+	}
+	if jws.Protected != protected {
+		t.Errorf("protected:\n%s\nwant:\n%s", jws.Protected, protected)
+	}
+	if jws.Payload != payload {
+		t.Errorf("payload:\n%s\nwant:\n%s", jws.Payload, payload)
+	}
+	if jws.Signature != signature {
+		t.Errorf("signature:\n%s\nwant:\n%s", jws.Signature, signature)
+	}
+}
+
+func TestJWSEncodeKID(t *testing.T) {
+	kid := keyID("https://example.org/account/1")
+	claims := struct{ Msg string }{"Hello JWS"}
+	// JWS signed with testKeyEC
+	const (
+		// {"alg":"ES256","kid":"https://example.org/account/1","nonce":"nonce","url":"url"}
+		protected = "eyJhbGciOiJFUzI1NiIsImtpZCI6Imh0dHBzOi8vZXhhbXBsZS5" +
+			"vcmcvYWNjb3VudC8xIiwibm9uY2UiOiJub25jZSIsInVybCI6InVybCJ9"
+		// {"Msg":"Hello JWS"}
+		payload = "eyJNc2ciOiJIZWxsbyBKV1MifQ"
+	)
+
+	b, err := jwsEncodeJSON(claims, testKeyEC, kid, "nonce", "url")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var jws struct{ Protected, Payload, Signature string }
+	if err := json.Unmarshal(b, &jws); err != nil {
+		t.Fatal(err)
+	}
+	if jws.Protected != protected {
+		t.Errorf("protected:\n%s\nwant:\n%s", jws.Protected, protected)
+	}
+	if jws.Payload != payload {
+		t.Errorf("payload:\n%s\nwant:\n%s", jws.Payload, payload)
 	}
 
-	for _, currentTest := range tests {
-		b, err := jwsEncodeJSON(currentTest.Claim, testKey, currentTest.RequestURL, currentTest.KeyID, currentTest.Nonce)
-		if err != nil {
-			t.Fatal(err)
-		}
-		var jws struct{ Protected, Payload, Signature string }
-		if err := json.Unmarshal(b, &jws); err != nil {
-			t.Fatal(err)
-		}
-		if jws.Protected != currentTest.Protected {
-			t.Errorf("protected:\n%s\nwant:\n%s", jws.Protected, currentTest.Protected)
-		}
-		if jws.Payload != currentTest.Payload {
-			t.Errorf("payload:\n%s\nwant:\n%s", jws.Payload, currentTest.Payload)
-		}
-		if jws.Signature != currentTest.Signature {
-			t.Errorf("signature:\n%s\nwant:\n%s", jws.Signature, currentTest.Signature)
-		}
+	sig, err := base64.RawURLEncoding.DecodeString(jws.Signature)
+	if err != nil {
+		t.Fatalf("jws.Signature: %v", err)
+	}
+	r, s := big.NewInt(0), big.NewInt(0)
+	r.SetBytes(sig[:len(sig)/2])
+	s.SetBytes(sig[len(sig)/2:])
+	h := sha256.Sum256([]byte(protected + "." + payload))
+	if !ecdsa.Verify(testKeyEC.Public().(*ecdsa.PublicKey), h[:], r, s) {
+		t.Error("invalid signature")
 	}
 }
 
@@ -195,7 +247,7 @@ func TestJWSEncodeJSONEC(t *testing.T) {
 	}
 	for i, test := range tt {
 		claims := struct{ Msg string }{"Hello JWS"}
-		b, err := jwsEncodeJSON(claims, test.key, "", "", "nonce")
+		b, err := jwsEncodeJSON(claims, test.key, noKeyID, "nonce", "url")
 		if err != nil {
 			t.Errorf("%d: %v", i, err)
 			continue
@@ -213,6 +265,8 @@ func TestJWSEncodeJSONEC(t *testing.T) {
 		var head struct {
 			Alg   string
 			Nonce string
+			URL   string `json:"url"`
+			KID   string `json:"kid"`
 			JWK   struct {
 				Crv string
 				Kty string
@@ -229,6 +283,13 @@ func TestJWSEncodeJSONEC(t *testing.T) {
 		if head.Nonce != "nonce" {
 			t.Errorf("%d: head.Nonce = %q; want nonce", i, head.Nonce)
 		}
+		if head.URL != "url" {
+			t.Errorf("%d: head.URL = %q; want 'url'", i, head.URL)
+		}
+		if head.KID != "" {
+			// We used noKeyID in jwsEncodeJSON: expect no kid value.
+			t.Errorf("%d: head.KID = %q; want empty", i, head.KID)
+		}
 		if head.JWK.Crv != test.crv {
 			t.Errorf("%d: head.JWK.Crv = %q; want %q", i, head.JWK.Crv, test.crv)
 		}
@@ -241,6 +302,80 @@ func TestJWSEncodeJSONEC(t *testing.T) {
 		if head.JWK.Y != test.y {
 			t.Errorf("%d: head.JWK.Y = %q; want %q", i, head.JWK.Y, test.y)
 		}
+	}
+}
+
+type customTestSigner struct {
+	sig []byte
+	pub crypto.PublicKey
+}
+
+func (s *customTestSigner) Public() crypto.PublicKey { return s.pub }
+func (s *customTestSigner) Sign(io.Reader, []byte, crypto.SignerOpts) ([]byte, error) {
+	return s.sig, nil
+}
+
+func TestJWSEncodeJSONCustom(t *testing.T) {
+	claims := struct{ Msg string }{"hello"}
+	const (
+		// printf '{"Msg":"hello"}' | b64raw
+		payload = "eyJNc2ciOiJoZWxsbyJ9"
+		// printf 'testsig' | b64raw
+		testsig = "dGVzdHNpZw"
+
+		// printf '{"alg":"ES256","jwk":{"crv":"P-256","kty":"EC","x":<testKeyECPubY>,"y":<testKeyECPubY>},"nonce":"nonce","url":"url"}' | b64raw
+		es256phead = "eyJhbGciOiJFUzI1NiIsImp3ayI6eyJjcnYiOiJQLTI1NiIsImt0" +
+			"eSI6IkVDIiwieCI6IjVsaEV1ZzV4SzR4QkRaMm5BYmF4THRhTGl2" +
+			"ODVieEo3ZVBkMWRrTzIzSFEiLCJ5IjoiNGFpSzcyc0JlVUFHa3Yw" +
+			"VGFMc213b2tZVVl5TnhHc1M1RU1JS3dzTklLayJ9LCJub25jZSI6" +
+			"Im5vbmNlIiwidXJsIjoidXJsIn0"
+
+		// {"alg":"RS256","jwk":{"e":"AQAB","kty":"RSA","n":"..."},"nonce":"nonce","url":"url"}
+		rs256phead = "eyJhbGciOiJSUzI1NiIsImp3ayI6eyJlIjoiQVFBQiIsImt0eSI6" +
+			"IlJTQSIsIm4iOiI0eGdaM2VSUGt3b1J2eTdxZVJVYm1NRGUwVi14" +
+			"SDllV0xkdTBpaGVlTGxybUQybXFXWGZQOUllU0tBcGJuMzRnOFR1" +
+			"QVM5ZzV6aHE4RUxRM2ttanItS1Y4NkdBTWdJNlZBY0dscTNRcnpw" +
+			"VENmXzMwQWI3LXphd3JmUmFGT05hMUh3RXpQWTFLSG5HVmt4SmM4" +
+			"NWdOa3dZSTlTWTJSSFh0dmxuM3pzNXdJVE5yZG9zcUVYZWFJa1ZZ" +
+			"QkVoYmhOdTU0cHAza3hvNlR1V0xpOWU2cFhlV2V0RXdtbEJ3dFda" +
+			"bFBvaWIyajNUeExCa3NLWmZveUZ5ZWszODBtSGdKQXVtUV9JMmZq" +
+			"ajk4Xzk3bWszaWhPWTRBZ1ZkQ0RqMXpfR0NvWmtHNVJxN25iQ0d5" +
+			"b3N5S1d5RFgwMFpzLW5OcVZob0xlSXZYQzRubldkSk1aNnJvZ3h5" +
+			"UVEifSwibm9uY2UiOiJub25jZSIsInVybCI6InVybCJ9"
+	)
+
+	tt := []struct {
+		alg, phead string
+		pub        crypto.PublicKey
+	}{
+		{"ES256", es256phead, testKeyEC.Public()},
+		{"RS256", rs256phead, testKey.Public()},
+	}
+	for _, tc := range tt {
+		tc := tc
+		t.Run(tc.alg, func(t *testing.T) {
+			signer := &customTestSigner{
+				sig: []byte("testsig"),
+				pub: tc.pub,
+			}
+			b, err := jwsEncodeJSON(claims, signer, noKeyID, "nonce", "url")
+			if err != nil {
+				t.Fatal(err)
+			}
+			var j struct{ Protected, Payload, Signature string }
+			if err := json.Unmarshal(b, &j); err != nil {
+				t.Fatal(err)
+			}
+			if j.Protected != tc.phead {
+				t.Errorf("j.Protected = %q\nwant %q", j.Protected, tc.phead)
+			}
+			if j.Payload != payload {
+				t.Errorf("j.Payload = %q\nwant %q", j.Payload, payload)
+			}
+			if j.Signature != testsig {
+				t.Errorf("j.Signature = %q\nwant %q", j.Signature, testsig)
+			}
+		})
 	}
 }
 
@@ -280,10 +415,8 @@ func TestJWKThumbprintRSA(t *testing.T) {
 func TestJWKThumbprintEC(t *testing.T) {
 	// Key example from RFC 7520
 	// expected was computed with
-	// echo -n '{"crv":"P-521","kty":"EC","x":"<base64X>","y":"<base64Y>"}' | \
-	// openssl dgst -binary -sha256 | \
-	// base64 | \
-	// tr -d '=' | tr '/+' '_-'
+	// printf '{"crv":"P-521","kty":"EC","x":"<base64X>","y":"<base64Y>"}' | \
+	// openssl dgst -binary -sha256 | b64raw
 	const (
 		base64X = "AHKZLLOsCOzz5cY97ewNUajB957y-C-U88c3v13nmGZx6sYl_oJXu9A5RkT" +
 			"KqjqvjyekWF-7ytDyRXYgCF5cj0Kt"

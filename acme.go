@@ -163,13 +163,13 @@ func (c Client) nonce() (string, error) {
 
 // Helper function to perform an http post request and read the body.
 // Will attempt to retry if error is badNonce
-func (c Client) postRaw(retryCount int, requestURL, keyID string, privateKey crypto.Signer, payload interface{}, expectedStatus []int) (*http.Response, []byte, error) {
+func (c Client) postRaw(retryCount int, requestURL, kid string, privateKey crypto.Signer, payload interface{}, expectedStatus []int) (*http.Response, []byte, error) {
 	nonce, err := c.nonce()
 	if err != nil {
 		return nil, nil, err
 	}
 
-	data, err := jwsEncodeJSON(payload, privateKey, requestURL, keyID, nonce)
+	data, err := jwsEncodeJSON(payload, privateKey, keyID(kid), nonce, requestURL)
 	if err != nil {
 		return nil, nil, fmt.Errorf("acme: error encoding json payload: %v", err)
 	}
@@ -198,7 +198,7 @@ func (c Client) postRaw(retryCount int, requestURL, keyID string, privateKey cry
 		}
 		if strings.HasSuffix(prob.Type, ":badNonce") {
 			// only retry if error is badNonce
-			return c.postRaw(retryCount+1, requestURL, keyID, privateKey, payload, expectedStatus)
+			return c.postRaw(retryCount+1, requestURL, kid, privateKey, payload, expectedStatus)
 		}
 		return resp, nil, err
 	}

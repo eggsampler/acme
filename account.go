@@ -86,7 +86,7 @@ func (c Client) AccountKeyChange(account Account, newPrivateKey crypto.Signer) (
 		OldKey:  []byte(oldJwkKeyPub),
 	}
 
-	innerJws, err := jwsEncodeJSON(keyChangeReq, newPrivateKey, c.dir.KeyChange, "", "")
+	innerJws, err := jwsEncodeJSON(keyChangeReq, newPrivateKey, "", "", c.dir.KeyChange)
 	if err != nil {
 		return account, fmt.Errorf("acme: error encoding inner jws: %v", err)
 	}
