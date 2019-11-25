@@ -260,39 +260,8 @@ func fetchLink(resp *http.Response, wantedLink string) string {
 }
 
 // FetchRaw is a helper function to assist with POST-AS-GET requests
-func (c Client) FetchRaw(account Account, requestURL string, payload interface{}, result interface{}) error {
-	nonce, err := c.nonce()
-	if err != nil {
-		return err
-	}
+func (c Client) Fetch(account Account, requestURL string, result interface{}) error {
+	_, err := c.post(requestURL, account.URL, account.PrivateKey, "", result, http.StatusOK)
 
-	data, err := jwsEncodeJSON(payload, account.PrivateKey, requestURL, account.URL, nonce)
-	if err != nil {
-		return fmt.Errorf("acme: error encoding json payload: %v", err)
-	}
-
-	req, err := http.NewRequest(http.MethodPost, requestURL, bytes.NewReader(data))
-	if err != nil {
-		return fmt.Errorf("acme: error creating request: %v", err)
-	}
-	req.Header.Set("Content-Type", "application/jose+json")
-
-	resp, err := c.do(req, true)
-	if err != nil {
-		return fmt.Errorf("acme: error sending request: %v", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("acme: error reading response body: %v", err)
-	}
-
-	if len(body) > 0 && result != nil {
-		if err := json.Unmarshal(body, result); err != nil {
-			return fmt.Errorf("acme: error parsing response: %v - %s", err, string(body))
-		}
-	}
-
-	return nil
+	return err
 }

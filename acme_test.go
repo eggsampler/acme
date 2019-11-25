@@ -1,6 +1,7 @@
 package acme
 
 import (
+	"encoding/json"
 	"net/http"
 	"reflect"
 	"testing"
@@ -50,17 +51,23 @@ func TestClient_Directory(t *testing.T) {
 	}
 }
 
-func TestClient_FetchRaw(t *testing.T) {
-	// test post as get to dir resource
-	account1 := makeAccount(t)
-	if err := testClient.FetchRaw(account1, testClient.Directory().URL, "", &Directory{}); err != nil {
-		t.Fatalf("unexpected error: %v", err)
+func TestClient_Fetch(t *testing.T) {
+	/*
+		_, account1order, _ := makeOrderFinalised(t, []string{ChallengeTypeDNS01}, Identifier{"dns", "example.com"})
+		account2 := makeAccount(t)
+		err := testClient.Fetch(account2, account1order.URL, &Account{})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	*/
+
+	account := makeAccount(t)
+	b := json.RawMessage{}
+	if err := testClient.Fetch(account, testClient.Directory().URL, &b); err != nil {
+		t.Errorf("error post-as-get directory url: %v", err)
 	}
 
-	// test post as get to another account
-	account2 := makeAccount(t)
-	err := testClient.FetchRaw(account1, account2.URL, "", &Account{})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	if err := testClient.Fetch(account, testClient.Directory().NewNonce, &b); err != nil {
+		t.Errorf("error post-as-get newnonce url: %v", err)
 	}
 }
