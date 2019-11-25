@@ -79,16 +79,16 @@ func TestAutoCert_GetCertificate(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
-		_, err := test.ac.GetCertificate(test.helo)
-		if test.err && err == nil {
+	for k := range tests {
+		_, err := tests[k].ac.GetCertificate(tests[k].helo)
+		if tests[k].err && err == nil {
 			t.Fatalf("expected error, got none")
 		}
-		if !test.err && err != nil {
+		if !tests[k].err && err != nil {
 			t.Fatalf("expected no error, got: %v", err)
 		}
-		if !strings.Contains(err.Error(), test.errStr) {
-			t.Fatalf("missing %q in error: %v", test.errStr, err)
+		if !strings.Contains(err.Error(), tests[k].errStr) {
+			t.Fatalf("missing %q in error: %v", tests[k].errStr, err)
 		}
 	}
 
