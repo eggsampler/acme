@@ -14,12 +14,11 @@ services:
 script:
   - unset TRAVIS_GO_VERSION
   - make clean
+  - make examples
   - make pebble
   - make pebble_stop
   - make boulder
   - make boulder_stop
-  - go build -o /dev/null examples/certbot/certbot.go
-  - go build -o /dev/null examples/autocert/autocert.go
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
