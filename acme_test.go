@@ -49,3 +49,18 @@ func TestClient_Directory(t *testing.T) {
 		t.Fatalf("directory mismatch, expected: %+v, got: %+v", testClient.dir, testClient.Directory())
 	}
 }
+
+func TestClient_FetchRaw(t *testing.T) {
+	// test post as get to dir resource
+	account1 := makeAccount(t)
+	if err := testClient.FetchRaw(account1, testClient.Directory().URL, "", &Directory{}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// test post as get to another account
+	account2 := makeAccount(t)
+	err := testClient.FetchRaw(account1, account2.URL, "", &Account{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
