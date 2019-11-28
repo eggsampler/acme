@@ -260,8 +260,11 @@ func fetchLink(resp *http.Response, wantedLink string) string {
 }
 
 // FetchRaw is a helper function to assist with POST-AS-GET requests
-func (c Client) Fetch(account Account, requestURL string, result interface{}) error {
-	_, err := c.post(requestURL, account.URL, account.PrivateKey, "", result, http.StatusOK)
+func (c Client) Fetch(account Account, requestURL string, result interface{}, expectedStatus ...int) error {
+	if len(expectedStatus) == 0 {
+		expectedStatus = []int{http.StatusOK}
+	}
+	_, err := c.post(requestURL, account.URL, account.PrivateKey, "", result, expectedStatus...)
 
 	return err
 }

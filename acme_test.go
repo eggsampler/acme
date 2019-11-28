@@ -52,14 +52,12 @@ func TestClient_Directory(t *testing.T) {
 }
 
 func TestClient_Fetch(t *testing.T) {
-	/*
-		_, account1order, _ := makeOrderFinalised(t, []string{ChallengeTypeDNS01}, Identifier{"dns", "example.com"})
-		account2 := makeAccount(t)
-		err := testClient.Fetch(account2, account1order.URL, &Account{})
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-	*/
+	_, account1order, _ := makeOrderFinalised(t, []string{ChallengeTypeDNS01}, Identifier{"dns", "example.com"})
+	account2 := makeAccount(t)
+	err := testClient.Fetch(account2, account1order.URL, &Account{})
+	if err == nil {
+		t.Error("expected error accessing different account post-as-get, got none")
+	}
 
 	account := makeAccount(t)
 	b := json.RawMessage{}
@@ -67,7 +65,7 @@ func TestClient_Fetch(t *testing.T) {
 		t.Errorf("error post-as-get directory url: %v", err)
 	}
 
-	if err := testClient.Fetch(account, testClient.Directory().NewNonce, &b); err != nil {
+	if err := testClient.Fetch(account, testClient.Directory().NewNonce, &b, http.StatusNoContent); err != nil {
 		t.Errorf("error post-as-get newnonce url: %v", err)
 	}
 }
