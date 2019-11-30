@@ -2,6 +2,7 @@ package acme
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -52,4 +53,83 @@ func TestClient_FetchOrder(t *testing.T) {
 
 func TestClient_FinalizeOrder(t *testing.T) {
 	makeOrderFinalised(t, nil)
+}
+
+func TestClient_NewOrderDomains(t *testing.T) {
+	account := makeAccount(t)
+	_, err := testClient.NewOrderDomains(account)
+	if err == nil {
+		t.Fatalf("expected error, got none")
+	}
+}
+
+func Test_checkFinalizedOrderStatus(t *testing.T) {
+	tests := []struct {
+		Order       Order
+		Finished    bool
+		HasError    bool
+		ErrorString string
+	}{
+		{
+			Order:       Order{Status: "invalid"},
+			Finished:    true,
+			HasError:    true,
+			ErrorString: "no error provided",
+		},
+		{
+			Order:       Order{Status: "invalid", Error: Problem{Type: "blahblahblah"}},
+			Finished:    true,
+			HasError:    true,
+			ErrorString: "blahblahblah",
+		},
+		{
+			Order:       Order{Status: "pending"},
+			Finished:    true,
+			HasError:    true,
+			ErrorString: "not fulfilled",
+		},
+		{
+			Order:       Order{Status: "ready"},
+			Finished:    true,
+			HasError:    true,
+			ErrorString: "unexpected",
+		},
+		{
+			Order:    Order{Status: "processing"},
+			Finished: false,
+			HasError: false,
+		},
+		{
+			Order:    Order{Status: "valid"},
+			Finished: true,
+			HasError: false,
+		},
+		{
+			Order:       Order{Status: "asdfasdf"},
+			Finished:    true,
+			HasError:    true,
+			ErrorString: "unknown order status",
+		},
+	}
+
+	for _, ct := range tests {
+		finished, err := checkFinalizedOrderStatus(ct.Order)
+		if ct.Finished != finished {
+			t.Errorf("finished mismatched, expected %t, got %t", ct.Finished, finished)
+		}
+		if ct.HasError && err == nil {
+			t.Errorf("order %v expected error, got none", ct.Order)
+		}
+		if !ct.HasError && err != nil {
+			t.Errorf("order %v expected no error, got: %v", ct.Order, err)
+		}
+		if len(ct.ErrorString) > 0 {
+			if err == nil {
+				t.Fatalf("expected error, got none")
+			}
+			if !strings.Contains(err.Error(), ct.ErrorString) {
+				t.Fatalf("expected error string %q not found in: %s", ct.ErrorString, err.Error())
+			}
+		}
+	}
 }
