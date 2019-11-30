@@ -48,7 +48,19 @@ func TestCheckError(t *testing.T) {
 }
 
 func TestProblem_Error(t *testing.T) {
-	err := Problem{}
+	err := Problem{
+		Status:   123,
+		Type:     "type",
+		Detail:   "detail",
+		Instance: "instance",
+		SubProblems: []SubProblem{
+			{
+				Type:       "type2",
+				Detail:     "detail",
+				Identifier: Identifier{"DNS", "example.com"},
+			},
+		},
+	}
 	s := error(err).Error()
 	if !strings.HasPrefix(s, "acme: error code") {
 		t.Fatalf("unexpected acme error: %v", err)
