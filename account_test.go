@@ -3,6 +3,7 @@ package acme
 import (
 	"crypto"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -141,4 +142,67 @@ func TestClient_DeactivateAccount(t *testing.T) {
 	if account.Status != "deactivated" {
 		t.Fatalf("expected account deactivated, got: %s", account.Status)
 	}
+}
+
+func TestClient_FetchOrderList(t *testing.T) {
+	if testClientMeta.Software == clientBoulder {
+		t.Skip("boulder doesnt support orders list: https://github.com/letsencrypt/boulder/issues/3335")
+		return
+	}
+
+	tests := []struct {
+		pre          func(acct *Account) bool
+		post         func(*testing.T, Account, OrderList)
+		expectsError bool
+		errorStr     string
+	}{
+		{
+			pre: func(acct *Account) bool {
+				acct.Orders = ""
+				return false
+			},
+			expectsError: true,
+			errorStr:     "no order",
+		},
+		{
+			pre: func(acct *Account) bool {
+				*acct, _, _ = makeOrderFinalised(t, nil)
+				return true
+			},
+			post: func(st *testing.T, account Account, list OrderList) {
+				if len(list.Orders) != 1 {
+					st.Fatalf("expected 1 orders, got: %d", len(list.Orders))
+				}
+			},
+			expectsError: false,
+		},
+	}
+
+	for i, ct := range tests {
+		acct := makeAccount(t)
+		if ct.pre != nil {
+			update := ct.pre(&acct)
+			if update {
+				var err error
+				acct, err = testClient.UpdateAccount(acct)
+				if err != nil {
+					panic(err)
+				}
+			}
+		}
+		list, err := testClient.FetchOrderList(acct)
+		if ct.expectsError && err == nil {
+			t.Errorf("order list test %d expected error, got none", i)
+		}
+		if !ct.expectsError && err != nil {
+			t.Errorf("order list test %d expected no error, got: %v", i, err)
+		}
+		if err != nil && ct.errorStr != "" && !strings.Contains(err.Error(), ct.errorStr) {
+			t.Errorf("order list test %d error doesnt contain %q: %s", i, ct.errorStr, err.Error())
+		}
+		if ct.post != nil {
+			ct.post(t, acct, list)
+		}
+	}
+
 }

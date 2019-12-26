@@ -18,8 +18,20 @@ import (
 	"time"
 )
 
+type clientMeta struct {
+	Software string
+	RootCert string
+	Options  []OptionFunc
+}
+
+const (
+	clientBoulder = "boulder"
+	clientPebble  = "pebble"
+)
+
 var (
-	testClient Client
+	testClient     Client
+	testClientMeta clientMeta
 )
 
 func init() {
@@ -41,20 +53,30 @@ func init() {
 		return
 	}
 
-	directories := []string{
-		"https://localhost:14000/dir",      // pebble
-		"https://localhost:4431/directory", // boulder https
-		"http://localhost:4001/directory",  // boulder non-https
+	directories := map[string]clientMeta{
+		"https://localhost:14000/dir": {
+			Software: clientPebble,
+			RootCert: "https://localhost:15000/roots/0",
+			Options:  []OptionFunc{WithInsecureSkipVerify()},
+		},
+		"https://localhost:4431/directory": {
+			Software: clientBoulder,
+			Options:  []OptionFunc{WithInsecureSkipVerify()},
+		},
+		"http://localhost:4001/directory": {
+			Software: clientBoulder,
+		},
 	}
 
-	for _, d := range directories {
-		testClient, err = NewClient(d, WithInsecureSkipVerify())
+	for k, v := range directories {
+		testClient, err = NewClient(k, v.Options...)
 		if err != nil {
-			log.Printf("error creating client for %s - %v", d, err)
+			log.Printf("error creating client for %s - %v", k, err)
 			continue
 		}
+		testClientMeta = v
 
-		log.Printf("using directory at: %s", d)
+		log.Printf("using %s directory at: %s", v.Software, k)
 		return
 	}
 

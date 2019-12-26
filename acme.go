@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -216,6 +217,12 @@ func (c Client) post(requestURL, keyID string, privateKey crypto.Signer, payload
 	resp, body, err := c.postRaw(0, requestURL, keyID, privateKey, payload, expectedStatus)
 	if err != nil {
 		return resp, err
+	}
+
+	if _, b := os.LookupEnv("ACME_DEBUG_POST"); b {
+		fmt.Println()
+		fmt.Println(string(body))
+		fmt.Println()
 	}
 
 	if len(body) > 0 && out != nil {
