@@ -36,8 +36,8 @@ var (
 )
 
 type acmeAccountFile struct {
-	PrivateKey *ecdsa.PrivateKey `json:"privateKey"`
-	Url        string            `json:"url"`
+	PrivateKey string `json:"privateKey"`
+	Url        string `json:"url"`
 }
 
 func main() {
@@ -152,18 +152,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error generating certificate key: %v", err)
 	}
-	// encode the new ec private key
-	certKeyEnc, err := x509.MarshalECPrivateKey(certKey)
-	if err != nil {
-		log.Fatalf("Error encoding certificate key file: %v", err)
-	}
+
+	b := key2pem(certKey)
 
 	// write the key to the key file as a pem encoded key
 	log.Printf("Writing key file: %s", keyFile)
-	if err := ioutil.WriteFile(keyFile, pem.EncodeToMemory(&pem.Block{
-		Type:  "EC PRIVATE KEY",
-		Bytes: certKeyEnc,
-	}), 0600); err != nil {
+	if err := ioutil.WriteFile(keyFile, b, 0600); err != nil {
 		log.Fatalf("Error writing key file %q: %v", keyFile, err)
 	}
 
@@ -224,7 +218,7 @@ func loadAccount(client acme.Client) (acme.Account, error) {
 	if err := json.Unmarshal(raw, &aaf); err != nil {
 		return acme.Account{}, fmt.Errorf("error parsing account file %q: %v", accountFile, err)
 	}
-	account, err := client.UpdateAccount(acme.Account{PrivateKey: aaf.PrivateKey, URL: aaf.Url}, getContacts()...)
+	account, err := client.UpdateAccount(acme.Account{PrivateKey: pem2key([]byte(aaf.PrivateKey)), URL: aaf.Url}, getContacts()...)
 	if err != nil {
 		return acme.Account{}, fmt.Errorf("error updating existing account: %v", err)
 	}
@@ -240,7 +234,7 @@ func createAccount(client acme.Client) (acme.Account, error) {
 	if err != nil {
 		return acme.Account{}, fmt.Errorf("error creating new account: %v", err)
 	}
-	raw, err := json.Marshal(acmeAccountFile{PrivateKey: privKey, Url: account.URL})
+	raw, err := json.Marshal(acmeAccountFile{PrivateKey: string(key2pem(privKey)), Url: account.URL})
 	if err != nil {
 		return acme.Account{}, fmt.Errorf("error parsing new account: %v", err)
 	}
@@ -259,4 +253,25 @@ func getContacts() []string {
 		}
 	}
 	return contacts
+}
+
+func key2pem(certKey *ecdsa.PrivateKey) []byte {
+	certKeyEnc, err := x509.MarshalECPrivateKey(certKey)
+	if err != nil {
+		log.Fatalf("Error encoding key: %v", err)
+	}
+
+	return pem.EncodeToMemory(&pem.Block{
+		Type:  "EC PRIVATE KEY",
+		Bytes: certKeyEnc,
+	})
+}
+
+func pem2key(data []byte) *ecdsa.PrivateKey {
+	b, _ := pem.Decode(data)
+	key, err := x509.ParseECPrivateKey(b.Bytes)
+	if err != nil {
+		log.Fatalf("Error decoding key: %v", err)
+	}
+	return key
 }
