@@ -14,7 +14,7 @@ services:
 
 script:
   - unset TRAVIS_GO_VERSION
-  - make full_test
+  - make test_full
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
