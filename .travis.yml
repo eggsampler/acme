@@ -14,12 +14,7 @@ services:
 
 script:
   - unset TRAVIS_GO_VERSION
-  - make clean
-  - make examples
-  - make pebble
-  - make pebble_stop
-  - make boulder
-  - make boulder_stop
+  - make full_test
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
