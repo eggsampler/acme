@@ -12,9 +12,16 @@ sudo: required
 services:
   - docker
 
+before_install:
+  - GO111MODULE=off go get github.com/mattn/goveralls
+
 script:
   - unset TRAVIS_GO_VERSION
-  - make test_full
-
-after_success:
-  - bash <(curl -s https://codecov.io/bash)
+  # test the examples first
+  - make clean examples
+  # test pebble integration
+  - make clean pebble
+  - goveralls -coverprofile=coverage.out -service=travis-ci
+  # test boulder integration
+  - make clean boulder
+  - goveralls -coverprofile=coverage.out -service=travis-ci
