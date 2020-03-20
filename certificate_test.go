@@ -1,8 +1,6 @@
 package acme
 
 import (
-	"os"
-	"strconv"
 	"testing"
 )
 
@@ -26,10 +24,6 @@ func TestClient_FetchCertificates(t *testing.T) {
 }
 
 func TestClient_FetchAllCertificates(t *testing.T) {
-	if testClientMeta.Software == clientBoulder {
-		t.Skip("boulder doesnt support alt cert chains: https://github.com/letsencrypt/boulder/issues/4567")
-		return
-	}
 	account, order, _ := makeOrderFinalised(t, nil)
 	if order.Certificate == "" {
 		t.Fatalf("no certificate: %+v", order)
@@ -38,16 +32,22 @@ func TestClient_FetchAllCertificates(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expeceted no error, got: %v", err)
 	}
-	roots, ok := os.LookupEnv("PEBBLE_ALTERNATE_ROOTS")
-	if !ok {
-		return
+
+	if len(certs) == 1 {
+		t.Skip("no alternative root certificates")
 	}
-	numRoots, err := strconv.Atoi(roots)
-	if err != nil {
-		panic(err)
-	}
-	if numRoots > 0 && len(certs) <= numRoots {
-		t.Fatalf("expected > %d cert chains, got: %d", numRoots, len(certs))
+
+	for url1, certs1 := range certs {
+		for url2, certs2 := range certs {
+			if url2 == url1 {
+				continue
+			}
+			root1 := certs1[len(certs1)-1].Issuer.String()
+			root2 := certs2[len(certs2)-1].Issuer.String()
+			if root1 == root2 {
+				t.Fatalf("same root on cetificates: %s", root1)
+			}
+		}
 	}
 }
 

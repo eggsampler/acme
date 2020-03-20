@@ -67,12 +67,16 @@ func (c Client) FetchAllCertificates(account Account, certificateURL string) (ma
 
 	alternates := fetchLinks(resp, "alternate")
 
-	for _, v := range alternates {
-		altCertChain, err := c.decodeCertificateChain(body, resp, account)
+	for _, altURL := range alternates {
+		altResp, altBody, err := c.postRaw(0, altURL, account.URL, account.PrivateKey, "", []int{http.StatusOK})
 		if err != nil {
-			return certs, fmt.Errorf("acme: error fetching alt cert chain at %q - %v", v, err)
+			return certs, fmt.Errorf("acme: error fetching alt cert chain at %q - %v", altURL, err)
 		}
-		certs[v] = altCertChain
+		altCertChain, err := c.decodeCertificateChain(altBody, altResp, account)
+		if err != nil {
+			return certs, fmt.Errorf("acme: error decoding alt cert chain at %q - %v", altURL, err)
+		}
+		certs[altURL] = altCertChain
 	}
 
 	return certs, nil
