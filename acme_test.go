@@ -115,7 +115,7 @@ func TestClient_Fetch(t *testing.T) {
 		t.Errorf("error post-as-get directory url: %v", err)
 	}
 
-	if err := testClient.Fetch(account, testClient.Directory().NewNonce, &b, http.StatusNoContent); err != nil {
+	if err := testClient.Fetch(account, testClient.Directory().NewNonce, &b, http.StatusNoContent, http.StatusOK); err != nil {
 		t.Errorf("error post-as-get newnonce url: %v", err)
 	}
 }
