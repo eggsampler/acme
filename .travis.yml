@@ -21,7 +21,6 @@ script:
   - make clean examples
   # test pebble integration
   - make clean pebble
-  - goveralls -coverprofile=coverage.out -service=travis-ci
   # test boulder integration
   - make clean boulder
   - goveralls -coverprofile=coverage.out -service=travis-ci
