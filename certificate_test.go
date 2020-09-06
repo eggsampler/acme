@@ -36,19 +36,6 @@ func TestClient_FetchAllCertificates(t *testing.T) {
 	if len(certs) == 1 {
 		t.Skip("no alternative root certificates")
 	}
-
-	for url1, certs1 := range certs {
-		for url2, certs2 := range certs {
-			if url2 == url1 {
-				continue
-			}
-			root1 := certs1[len(certs1)-1].Issuer.String()
-			root2 := certs2[len(certs2)-1].Issuer.String()
-			if root1 == root2 {
-				t.Fatalf("same root on cetificates: %s", root1)
-			}
-		}
-	}
 }
 
 func TestClient_RevokeCertificate(t *testing.T) {
