@@ -1,3 +1,5 @@
+// +build ignore
+
 package main
 
 // An example of the acme library to create a simple certbot-like clone. Takes a few command line parameters and issues

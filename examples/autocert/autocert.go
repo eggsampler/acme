@@ -1,3 +1,5 @@
+// +build ignore
+
 package main
 
 // An example which uses autocert to issue certificates for connecting hosts
