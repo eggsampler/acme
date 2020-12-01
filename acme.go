@@ -21,7 +21,10 @@ const (
 	// LetsEncryptStaging holds the staging directory url
 	LetsEncryptStaging = "https://acme-staging-v02.api.letsencrypt.org/directory"
 
-	userAgentString = "eggsampler-acme/1.0 Go-http-client/1.1"
+	// ZeroSSLProduction holds the ZeroSSL directory url
+	ZeroSSLProduction = "https://acme.zerossl.com/v2/DV90"
+
+	userAgentString = "eggsampler-acme/v3 Go-http-client/1.1"
 )
 
 // NewClient creates a new acme client given a valid directory url.

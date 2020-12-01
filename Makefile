@@ -16,6 +16,7 @@ test:
 examples:
 	go build -o /dev/null examples/certbot/certbot.go
 	go build -o /dev/null examples/autocert/autocert.go
+	go build -o /dev/null examples/zerossl/zerossl.go
 
 clean:
 	rm -f coverage.out

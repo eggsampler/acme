@@ -93,6 +93,20 @@ type Account struct {
 	// Thumbprint is the SHA-256 digest JWK_Thumbprint of the account key.
 	// See https://tools.ietf.org/html/rfc8555#section-8.1
 	Thumbprint string `json:"-"`
+
+	// ExternalAccountBinding is populated when using the NewAccountExternalBinding and is otherwise empty.
+	// Not populated when account is fetched or created otherwise.
+	ExternalAccountBinding ExternalAccountBinding `json:"-"`
+}
+
+// ExternalAccountBinding holds the key identifier and mac key provided for use in servers that support/require
+// external account binding.
+// The MacKey is a base64url-encoded string.
+// The following hash functions are supported: SHA256, SHA384, SHA512
+type ExternalAccountBinding struct {
+	KeyIdentifier string      `json:"-"`
+	MacKey        string      `json:"-"`
+	HashFunc      crypto.Hash `json:"-"`
 }
 
 // Identifier object used in order and authorization objects
