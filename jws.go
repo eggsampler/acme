@@ -7,7 +7,6 @@ package acme
 import (
 	"crypto"
 	"crypto/ecdsa"
-	"crypto/hmac"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
@@ -20,7 +19,7 @@ import (
 	"math/big"
 )
 
-var errUnsupportedKey = errors.New("acme: unknown key type; only RSA and ECDSA are supported")
+var errUnsupportedKey = errors.New("unknown key type; only RSA and ECDSA are supported")
 
 // keyID is the account identity provided by a CA during registration.
 type keyID string
@@ -85,41 +84,6 @@ func jwsEncodeJSON(claimset interface{}, key crypto.Signer, kid keyID, nonce, ur
 		Payload:   payload,
 		Sig:       base64.RawURLEncoding.EncodeToString(sig),
 	}
-	return json.Marshal(&enc)
-}
-
-// jwsEncodeEAB is a modification of jwsEncodeJSON
-// Used to encode the external account binding field for RFC8555.
-func jwsEncodeEAB(key crypto.Signer, kid keyID, url, accountMac, alg string, hashFunc crypto.Hash) ([]byte, error) {
-	jwk, err := jwkEncode(key.Public())
-	if err != nil {
-		return nil, err
-	}
-	payload := base64.RawURLEncoding.EncodeToString([]byte(jwk))
-
-	phead := fmt.Sprintf(`{"alg":%q,"kid":%q,"url":%q}`, alg, kid, url)
-	phead = base64.RawURLEncoding.EncodeToString([]byte(phead))
-
-	decodedAccountMac, err := base64.RawURLEncoding.DecodeString(accountMac)
-	if err != nil {
-		return nil, err
-	}
-	mac := hmac.New(hashFunc.New, decodedAccountMac)
-
-	if _, err := mac.Write([]byte(phead + "." + payload)); err != nil {
-		return nil, err
-	}
-
-	enc := struct {
-		Protected string `json:"protected"`
-		Payload   string `json:"payload"`
-		Sig       string `json:"signature"`
-	}{
-		Protected: phead,
-		Payload:   payload,
-		Sig:       base64.RawURLEncoding.EncodeToString(mac.Sum(nil)),
-	}
-
 	return json.Marshal(&enc)
 }
 

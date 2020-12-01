@@ -2,7 +2,10 @@ package acme
 
 import (
 	"crypto"
+	"crypto/hmac"
 	"crypto/tls"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -99,13 +102,44 @@ func NewAcctOptWithContacts(contacts ...string) NewAccountOptionFunc {
 }
 
 // NewAcctOptExternalAccountBinding adds an external account binding to the new account request
+// Code adopted from jwsEncodeJSON
 func NewAcctOptExternalAccountBinding(binding ExternalAccountBinding) NewAccountOptionFunc {
 	return func(privateKey crypto.Signer, account *Account, request *NewAccountRequest, client Client) error {
-		jwsEab, err := jwsEncodeEAB(privateKey, keyID(binding.KeyIdentifier), client.Directory().NewAccount,
-			binding.MacKey, binding.Algorithm, binding.HashFunc)
+		jwk, err := jwkEncode(privateKey.Public())
 		if err != nil {
-			return fmt.Errorf("acme: error computing external account binding jws: %v", err)
+			return fmt.Errorf("acme: external account binding error encoding public key: %v", err)
 		}
+		payload := base64.RawURLEncoding.EncodeToString([]byte(jwk))
+
+		phead := fmt.Sprintf(`{"alg":%q,"kid":%q,"url":%q}`,
+			binding.Algorithm, binding.KeyIdentifier, client.Directory().NewAccount)
+		phead = base64.RawURLEncoding.EncodeToString([]byte(phead))
+
+		decodedAccountMac, err := base64.RawURLEncoding.DecodeString(binding.MacKey)
+		if err != nil {
+			return fmt.Errorf("acme: external account binding error decoding mac key: %v", err)
+		}
+		macHash := hmac.New(binding.HashFunc.New, decodedAccountMac)
+
+		if _, err := macHash.Write([]byte(phead + "." + payload)); err != nil {
+			return err
+		}
+
+		enc := struct {
+			Protected string `json:"protected"`
+			Payload   string `json:"payload"`
+			Sig       string `json:"signature"`
+		}{
+			Protected: phead,
+			Payload:   payload,
+			Sig:       base64.RawURLEncoding.EncodeToString(macHash.Sum(nil)),
+		}
+
+		jwsEab, err := json.Marshal(&enc)
+		if err != nil {
+			return fmt.Errorf("acme: external account binding error marshalling struct: %v", err)
+		}
+
 		request.ExternalAccountBinding = jwsEab
 		account.ExternalAccountBinding = binding
 		return nil
