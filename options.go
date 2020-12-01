@@ -72,35 +72,35 @@ func WithHTTPClient(httpClient *http.Client) OptionFunc {
 }
 
 // NewAccountOptionFunc function prototype for passing options to NewClient
-type NewAccountOptionFunc func(crypto.Signer, *Account, NewAccountRequest, Client) error
+type NewAccountOptionFunc func(crypto.Signer, *Account, *NewAccountRequest, Client) error
 
-// NewActOptOnlyReturnExisting sets the new client request to only return existing accounts
-func NewActOptOnlyReturnExisting() NewAccountOptionFunc {
-	return func(privateKey crypto.Signer, account *Account, request NewAccountRequest, client Client) error {
+// NewAcctOptOnlyReturnExisting sets the new client request to only return existing accounts
+func NewAcctOptOnlyReturnExisting() NewAccountOptionFunc {
+	return func(privateKey crypto.Signer, account *Account, request *NewAccountRequest, client Client) error {
 		request.OnlyReturnExisting = true
 		return nil
 	}
 }
 
-// NewActOptAgreeTOS sets the new account request as agreeing to the terms of service
-func NewActOptAgreeTOS() NewAccountOptionFunc {
-	return func(privateKey crypto.Signer, account *Account, request NewAccountRequest, client Client) error {
+// NewAcctOptAgreeTOS sets the new account request as agreeing to the terms of service
+func NewAcctOptAgreeTOS() NewAccountOptionFunc {
+	return func(privateKey crypto.Signer, account *Account, request *NewAccountRequest, client Client) error {
 		request.TermsOfServiceAgreed = true
 		return nil
 	}
 }
 
-// NewActOptWithContacts adds contacts to a new account request
-func NewActOptWithContacts(contacts ...string) NewAccountOptionFunc {
-	return func(privateKey crypto.Signer, account *Account, request NewAccountRequest, client Client) error {
+// NewAcctOptWithContacts adds contacts to a new account request
+func NewAcctOptWithContacts(contacts ...string) NewAccountOptionFunc {
+	return func(privateKey crypto.Signer, account *Account, request *NewAccountRequest, client Client) error {
 		request.Contact = contacts
 		return nil
 	}
 }
 
-// NewActOptExternalAccountBinding adds an external account binding to the new account request
-func NewActOptExternalAccountBinding(binding ExternalAccountBinding) NewAccountOptionFunc {
-	return func(privateKey crypto.Signer, account *Account, request NewAccountRequest, client Client) error {
+// NewAcctOptExternalAccountBinding adds an external account binding to the new account request
+func NewAcctOptExternalAccountBinding(binding ExternalAccountBinding) NewAccountOptionFunc {
+	return func(privateKey crypto.Signer, account *Account, request *NewAccountRequest, client Client) error {
 		jwsEab, err := jwsEncodeEAB(privateKey, keyID(binding.KeyIdentifier), client.Directory().NewAccount,
 			binding.MacKey, binding.Algorithm, binding.HashFunc)
 		if err != nil {

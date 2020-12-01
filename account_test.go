@@ -219,7 +219,7 @@ func TestClient_NewAccountOptions(t *testing.T) {
 		{
 			name: "no hash func",
 			options: []NewAccountOptionFunc{
-				NewActOptAgreeTOS(),
+				NewAcctOptAgreeTOS(),
 			},
 		},
 	}

@@ -79,8 +79,8 @@ func createAccount(client acme.Client) acme.Account {
 
 	log.Printf("EAB: %+v", eab)
 
-	account, err := client.NewAccountOptions(privKey, acme.NewActOptAgreeTOS(),
-		acme.NewActOptExternalAccountBinding(eab))
+	account, err := client.NewAccountOptions(privKey, acme.NewAcctOptAgreeTOS(),
+		acme.NewAcctOptExternalAccountBinding(eab))
 	iferr(err, "creating new account")
 	acc := acmeAccountFile{
 		PrivateKey: string(key2pem(privKey)),

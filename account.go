@@ -15,13 +15,13 @@ import (
 func (c Client) NewAccount(privateKey crypto.Signer, onlyReturnExisting, termsOfServiceAgreed bool, contact ...string) (Account, error) {
 	var opts []NewAccountOptionFunc
 	if onlyReturnExisting {
-		opts = append(opts, NewActOptOnlyReturnExisting())
+		opts = append(opts, NewAcctOptOnlyReturnExisting())
 	}
 	if termsOfServiceAgreed {
-		opts = append(opts, NewActOptAgreeTOS())
+		opts = append(opts, NewAcctOptAgreeTOS())
 	}
 	if contact != nil && len(contact) > 0 {
-		opts = append(opts, NewActOptWithContacts(contact...))
+		opts = append(opts, NewAcctOptWithContacts(contact...))
 	}
 
 	return c.NewAccountOptions(privateKey, opts...)
@@ -33,7 +33,7 @@ func (c Client) NewAccountOptions(privateKey crypto.Signer, options ...NewAccoun
 	account := Account{}
 
 	for _, opt := range options {
-		if err := opt(privateKey, &account, newAccountReq, c); err != nil {
+		if err := opt(privateKey, &account, &newAccountReq, c); err != nil {
 			return account, err
 		}
 	}

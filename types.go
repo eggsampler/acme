@@ -95,7 +95,7 @@ type Account struct {
 	// See https://tools.ietf.org/html/rfc8555#section-8.1
 	Thumbprint string `json:"-"`
 
-	// ExternalAccountBinding is populated when using the NewActOptExternalAccountBinding option for NewAccountOption
+	// ExternalAccountBinding is populated when using the NewAcctOptExternalAccountBinding option for NewAccountOption
 	// and is otherwise empty. Not populated when account is fetched or created otherwise.
 	ExternalAccountBinding ExternalAccountBinding `json:"-"`
 }
