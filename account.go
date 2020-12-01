@@ -10,57 +10,33 @@ import (
 )
 
 // NewAccount registers a new account with the acme service
+// Note this function is essentially deprecated and only present for backwards compatibility.
+// New programs should implement NewAccountOptions instead.
 func (c Client) NewAccount(privateKey crypto.Signer, onlyReturnExisting, termsOfServiceAgreed bool, contact ...string) (Account, error) {
-	newAccountReq := struct {
-		OnlyReturnExisting   bool     `json:"onlyReturnExisting"`
-		TermsOfServiceAgreed bool     `json:"termsOfServiceAgreed"`
-		Contact              []string `json:"contact,omitempty"`
-	}{
-		OnlyReturnExisting:   onlyReturnExisting,
-		TermsOfServiceAgreed: termsOfServiceAgreed,
-		Contact:              contact,
+	var opts []NewAccountOptionFunc
+	if onlyReturnExisting {
+		opts = append(opts, NewActOptOnlyReturnExisting())
+	}
+	if termsOfServiceAgreed {
+		opts = append(opts, NewActOptAgreeTOS())
+	}
+	if contact != nil && len(contact) > 0 {
+		opts = append(opts, NewActOptWithContacts(contact...))
 	}
 
-	account := Account{}
-	resp, err := c.post(c.dir.NewAccount, "", privateKey, newAccountReq, &account, http.StatusOK, http.StatusCreated)
-	if err != nil {
-		return account, err
-	}
-
-	account.URL = resp.Header.Get("Location")
-	account.PrivateKey = privateKey
-
-	if account.Thumbprint == "" {
-		account.Thumbprint, err = JWKThumbprint(account.PrivateKey.Public())
-		if err != nil {
-			return account, fmt.Errorf("acme: error computing account thumbprint: %v", err)
-		}
-	}
-
-	return account, nil
+	return c.NewAccountOptions(privateKey, opts...)
 }
 
-// NewAccountExternalBinding registers an account with an acme server that requires external account binding
-func (c Client) NewAccountExternalBinding(privateKey crypto.Signer, onlyReturnExisting, termsOfServiceAgreed bool,
-	eab ExternalAccountBinding, contact ...string) (Account, error) {
-	newAccountReq := struct {
-		OnlyReturnExisting     bool            `json:"onlyReturnExisting"`
-		TermsOfServiceAgreed   bool            `json:"termsOfServiceAgreed"`
-		Contact                []string        `json:"contact,omitempty"`
-		ExternalAccountBinding json.RawMessage `json:"externalAccountBinding"`
-	}{
-		OnlyReturnExisting:   onlyReturnExisting,
-		TermsOfServiceAgreed: termsOfServiceAgreed,
-		Contact:              contact,
-	}
-
+// NewAccountOptions registers an account with an acme server with the provided options.
+func (c Client) NewAccountOptions(privateKey crypto.Signer, options ...NewAccountOptionFunc) (Account, error) {
+	newAccountReq := NewAccountRequest{}
 	account := Account{}
 
-	jwsEab, err := jwsEncodeEAB(privateKey, keyID(eab.KeyIdentifier), eab.MacKey, c.dir.NewAccount, eab.HashFunc)
-	if err != nil {
-		return account, fmt.Errorf("acme: error computing external account binding jws: %v", err)
+	for _, opt := range options {
+		if err := opt(privateKey, &account, newAccountReq, c); err != nil {
+			return account, err
+		}
 	}
-	newAccountReq.ExternalAccountBinding = jwsEab
 
 	resp, err := c.post(c.dir.NewAccount, "", privateKey, newAccountReq, &account, http.StatusOK, http.StatusCreated)
 	if err != nil {
@@ -76,8 +52,6 @@ func (c Client) NewAccountExternalBinding(privateKey crypto.Signer, onlyReturnEx
 			return account, fmt.Errorf("acme: error computing account thumbprint: %v", err)
 		}
 	}
-
-	account.ExternalAccountBinding = eab
 
 	return account, nil
 }

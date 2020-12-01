@@ -1,8 +1,10 @@
 package acme
 
 import (
+	"crypto"
 	"crypto/tls"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 )
@@ -65,6 +67,47 @@ func WithHTTPClient(httpClient *http.Client) OptionFunc {
 			return errors.New("client must not be nil")
 		}
 		client.httpClient = httpClient
+		return nil
+	}
+}
+
+// NewAccountOptionFunc function prototype for passing options to NewClient
+type NewAccountOptionFunc func(crypto.Signer, *Account, NewAccountRequest, Client) error
+
+// NewActOptOnlyReturnExisting sets the new client request to only return existing accounts
+func NewActOptOnlyReturnExisting() NewAccountOptionFunc {
+	return func(privateKey crypto.Signer, account *Account, request NewAccountRequest, client Client) error {
+		request.OnlyReturnExisting = true
+		return nil
+	}
+}
+
+// NewActOptAgreeTOS sets the new account request as agreeing to the terms of service
+func NewActOptAgreeTOS() NewAccountOptionFunc {
+	return func(privateKey crypto.Signer, account *Account, request NewAccountRequest, client Client) error {
+		request.TermsOfServiceAgreed = true
+		return nil
+	}
+}
+
+// NewActOptWithContacts adds contacts to a new account request
+func NewActOptWithContacts(contacts ...string) NewAccountOptionFunc {
+	return func(privateKey crypto.Signer, account *Account, request NewAccountRequest, client Client) error {
+		request.Contact = contacts
+		return nil
+	}
+}
+
+// NewActOptExternalAccountBinding adds an external account binding to the new account request
+func NewActOptExternalAccountBinding(binding ExternalAccountBinding) NewAccountOptionFunc {
+	return func(privateKey crypto.Signer, account *Account, request NewAccountRequest, client Client) error {
+		jwsEab, err := jwsEncodeEAB(privateKey, keyID(binding.KeyIdentifier), client.Directory().NewAccount,
+			binding.MacKey, binding.Algorithm, binding.HashFunc)
+		if err != nil {
+			return fmt.Errorf("acme: error computing external account binding jws: %v", err)
+		}
+		request.ExternalAccountBinding = jwsEab
+		account.ExternalAccountBinding = binding
 		return nil
 	}
 }

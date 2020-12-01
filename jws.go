@@ -89,25 +89,14 @@ func jwsEncodeJSON(claimset interface{}, key crypto.Signer, kid keyID, nonce, ur
 }
 
 // jwsEncodeEAB is a modification of jwsEncodeJSON
-// Used to encode the external account binding field for RFC8555
-func jwsEncodeEAB(key crypto.Signer, kid keyID, accountMac, url string, hashFunc crypto.Hash) ([]byte, error) {
+// Used to encode the external account binding field for RFC8555.
+func jwsEncodeEAB(key crypto.Signer, kid keyID, url, accountMac, alg string, hashFunc crypto.Hash) ([]byte, error) {
 	jwk, err := jwkEncode(key.Public())
 	if err != nil {
 		return nil, err
 	}
 	payload := base64.RawURLEncoding.EncodeToString([]byte(jwk))
 
-	var alg string
-	switch hashFunc {
-	case crypto.SHA256:
-		alg = "HS256"
-	case crypto.SHA384:
-		alg = "HS384"
-	case crypto.SHA512:
-		alg = "HS512"
-	default:
-		return nil, fmt.Errorf("acme: unsupported hash func: %v", hashFunc)
-	}
 	phead := fmt.Sprintf(`{"alg":%q,"kid":%q,"url":%q}`, alg, kid, url)
 	phead = base64.RawURLEncoding.EncodeToString([]byte(phead))
 

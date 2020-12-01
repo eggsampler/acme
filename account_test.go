@@ -206,3 +206,33 @@ func TestClient_FetchOrderList(t *testing.T) {
 	}
 
 }
+
+/*
+TODO: Create tests for this func, or migrate the tests from the old NewAccount func to this
+func TestClient_NewAccountOptions(t *testing.T) {
+	tests := []struct {
+		name         string
+		options      []NewAccountOptionFunc
+		expectsError bool
+		errorStr     string
+	}{
+		{
+			name: "no hash func",
+			options: []NewAccountOptionFunc{
+				NewActOptAgreeTOS(),
+			},
+		},
+	}
+
+	for i, ct := range tests {
+		key := makePrivateKey(t)
+		_, err := testClient.NewAccountOptions(key, ct.options...)
+		if ct.expectsError && err == nil {
+			t.Errorf("NewAccountOptions test %d %q expected error, got none", i, ct.name)
+		}
+		if !ct.expectsError && err != nil {
+			t.Errorf("NewAccountOptions %d %q expected no error, got: %v", i, ct.name, err)
+		}
+	}
+}
+*/

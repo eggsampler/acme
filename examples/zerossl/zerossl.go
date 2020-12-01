@@ -70,31 +70,17 @@ func createAccount(client acme.Client) acme.Account {
 	iferr(err, "generating priv key")
 
 	// TODO: Enter EAB Credentials as generated at https://app.zerossl.com/developer
-
-	algo := os.Getenv("EAB_ALGO")
-	if algo == "" {
-		algo = "SHA-256"
-	}
-	var hf crypto.Hash
-	switch algo {
-	case "SHA-256":
-		hf = crypto.SHA256
-	case "SHA-384":
-		hf = crypto.SHA384
-	case "SHA-512":
-		hf = crypto.SHA512
-	default:
-		log.Fatalf("Unsupported hash function: %s", algo)
-	}
 	eab := acme.ExternalAccountBinding{
 		KeyIdentifier: os.Getenv("EAB_KID"),
-		MacKey:        os.Getenv("EAB_HMAC_Key"),
-		HashFunc:      hf,
+		MacKey:        os.Getenv("EAB_HMAC_KEY"),
+		Algorithm:     "HS256",
+		HashFunc:      crypto.SHA256,
 	}
 
 	log.Printf("EAB: %+v", eab)
 
-	account, err := client.NewAccountExternalBinding(privKey, false, true, eab)
+	account, err := client.NewAccountOptions(privKey, acme.NewActOptAgreeTOS(),
+		acme.NewActOptExternalAccountBinding(eab))
 	iferr(err, "creating new account")
 	acc := acmeAccountFile{
 		PrivateKey: string(key2pem(privKey)),
