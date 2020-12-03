@@ -2,6 +2,11 @@ package acme
 
 import (
 	"crypto"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"errors"
+	"io"
 	"reflect"
 	"strings"
 	"testing"
@@ -115,21 +120,88 @@ func TestClient_UpdateAccount2(t *testing.T) {
 	}
 }
 
+type errSigner struct{}
+
+func (es errSigner) Public() crypto.PublicKey {
+	privKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	return privKey
+}
+
+func (es errSigner) Sign(io.Reader, []byte, crypto.SignerOpts) ([]byte, error) {
+	return nil, errors.New("cannot sign key okeydokey")
+}
+
 func TestClient_AccountKeyChange(t *testing.T) {
-	account := makeAccount(t)
-	newKey := makePrivateKey(t)
-	accountNewKey, err := testClient.AccountKeyChange(account, newKey)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	tests := []struct {
+		name         string
+		account      func() Account
+		newKey       func() crypto.Signer
+		expectsError bool
+		errorStr     string
+	}{
+		{
+			name: "bad key",
+			account: func() Account {
+				return Account{
+					PrivateKey: errSigner{},
+				}
+			},
+			newKey: func() crypto.Signer {
+				return nil
+			},
+			expectsError: true,
+			errorStr:     "unknown key type",
+		},
+		{
+			name:    "success",
+			account: func() Account { return makeAccount(t) },
+			newKey:  func() crypto.Signer { return makePrivateKey(t) },
+		},
+		{
+			name:         "bad signer",
+			account:      func() Account { return makeAccount(t) },
+			newKey:       func() crypto.Signer { return errSigner{} },
+			expectsError: true,
+			errorStr:     "inner jws",
+		},
+		{
+			name: "bad post",
+			account: func() Account {
+				acct := makeAccount(t)
+				acct.URL = "invalid"
+				return acct
+			},
+			newKey:       func() crypto.Signer { return makePrivateKey(t) },
+			expectsError: true,
+			errorStr:     "malformed",
+		},
 	}
 
-	if accountNewKey.PrivateKey == account.PrivateKey {
-		t.Fatal("account key didnt change")
+	for i, ct := range tests {
+		account := ct.account()
+		newKey := ct.newKey()
+		accountNewKey, err := testClient.AccountKeyChange(account, newKey)
+		if ct.expectsError && err == nil {
+			t.Errorf("AccountKeyChange test %d %q expected error, got none", i, ct.name)
+		}
+		if !ct.expectsError && err != nil {
+			t.Errorf("AccountKeyChange test %d %q expected no error, got: %v", i, ct.name, err)
+		}
+		if err != nil && ct.errorStr != "" && !strings.Contains(err.Error(), ct.errorStr) {
+			t.Errorf("AccountKeyChange test %d %q error doesnt contain %q: %s", i, ct.name, ct.errorStr, err.Error())
+		}
+
+		if err != nil {
+			continue
+		}
+		if accountNewKey.PrivateKey == account.PrivateKey {
+			t.Fatalf("UpdateAccount test %d %q account key didnt change", i, ct.name)
+		}
+		if accountNewKey.PrivateKey != newKey {
+			t.Fatalf("UpdateAccount test %d %q new key isnt set", i, ct.name)
+		}
 	}
 
-	if accountNewKey.PrivateKey != newKey {
-		t.Fatal("new key isnt set")
-	}
 }
 
 func TestClient_DeactivateAccount(t *testing.T) {
@@ -207,8 +279,6 @@ func TestClient_FetchOrderList(t *testing.T) {
 
 }
 
-/*
-TODO: Create tests for this func, or migrate the tests from the old NewAccount func to this
 func TestClient_NewAccountOptions(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -217,10 +287,14 @@ func TestClient_NewAccountOptions(t *testing.T) {
 		errorStr     string
 	}{
 		{
-			name: "no hash func",
+			name: "opt error func",
 			options: []NewAccountOptionFunc{
-				NewAcctOptAgreeTOS(),
+				func(signer crypto.Signer, account *Account, request *NewAccountRequest, client Client) error {
+					return errors.New("ALWAYS ERRORS")
+				},
 			},
+			expectsError: true,
+			errorStr:     "ALWAYS",
 		},
 	}
 
@@ -231,8 +305,7 @@ func TestClient_NewAccountOptions(t *testing.T) {
 			t.Errorf("NewAccountOptions test %d %q expected error, got none", i, ct.name)
 		}
 		if !ct.expectsError && err != nil {
-			t.Errorf("NewAccountOptions %d %q expected no error, got: %v", i, ct.name, err)
+			t.Errorf("NewAccountOptions test %d %q expected no error, got: %v", i, ct.name, err)
 		}
 	}
 }
-*/

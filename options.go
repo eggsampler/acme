@@ -105,6 +105,19 @@ func NewAcctOptWithContacts(contacts ...string) NewAccountOptionFunc {
 // Code adopted from jwsEncodeJSON
 func NewAcctOptExternalAccountBinding(binding ExternalAccountBinding) NewAccountOptionFunc {
 	return func(privateKey crypto.Signer, account *Account, request *NewAccountRequest, client Client) error {
+		if binding.KeyIdentifier == "" {
+			return errors.New("acme: NewAcctOptExternalAccountBinding has no KeyIdentifier set")
+		}
+		if binding.MacKey == "" {
+			return errors.New("acme: NewAcctOptExternalAccountBinding has no MacKey set")
+		}
+		if binding.Algorithm == "" {
+			return errors.New("acme: NewAcctOptExternalAccountBinding has no Algorithm set")
+		}
+		if binding.HashFunc == 0 {
+			return errors.New("acme: NewAcctOptExternalAccountBinding has no HashFunc set")
+		}
+
 		jwk, err := jwkEncode(privateKey.Public())
 		if err != nil {
 			return fmt.Errorf("acme: external account binding error encoding public key: %v", err)

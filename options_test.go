@@ -1,8 +1,10 @@
 package acme
 
 import (
+	"crypto"
 	"net/http"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
@@ -85,5 +87,137 @@ func TestWithHTTPClient(t *testing.T) {
 	}
 	if reflect.TypeOf(suffix).Kind() != reflect.TypeOf(acmeClient.httpClient).Kind() {
 		t.Fatalf("http client suffix not set, expected %v, got %v", suffix, acmeClient.httpClient)
+	}
+}
+
+func TestNewAcctOptOnlyReturnExisting(t *testing.T) {
+	r := NewAccountRequest{}
+	f := NewAcctOptOnlyReturnExisting()
+	err := f(nil, nil, &r, Client{})
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	if !r.OnlyReturnExisting {
+		t.Fatal("OnlyReturnExisting not set")
+	}
+}
+
+func TestNewAcctOptAgreeTOS(t *testing.T) {
+	r := NewAccountRequest{}
+	f := NewAcctOptAgreeTOS()
+	err := f(nil, nil, &r, Client{})
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	if !r.TermsOfServiceAgreed {
+		t.Fatal("TermsOfServiceAgreed not set")
+	}
+}
+
+func TestNewAcctOptWithContacts(t *testing.T) {
+	r := NewAccountRequest{}
+	f := NewAcctOptWithContacts("hello")
+	err := f(nil, nil, &r, Client{})
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	if len(r.Contact) != 1 && r.Contact[0] != "hello" {
+		t.Fatalf(`expected contact "hello" got: %v`, r.Contact[0])
+	}
+}
+
+func TestNewAcctOptExternalAccountBinding(t *testing.T) {
+	tests := []struct {
+		name         string
+		binding      ExternalAccountBinding
+		signer       crypto.Signer
+		account      *Account
+		request      *NewAccountRequest
+		client       Client
+		expectsError bool
+		errorStr     string
+	}{
+		{
+			name:         "empty binding",
+			expectsError: true,
+			errorStr:     "no KeyIdentifier set",
+		},
+		{
+			name: "empty mac",
+			binding: ExternalAccountBinding{
+				KeyIdentifier: "rubbish",
+			},
+			expectsError: true,
+			errorStr:     "no MacKey set",
+		},
+		{
+			name: "empty algo",
+			binding: ExternalAccountBinding{
+				KeyIdentifier: "rubbish",
+				MacKey:        "rubbish",
+			},
+			expectsError: true,
+			errorStr:     "no Algorithm set",
+		},
+		{
+			name: "empty hashfunc",
+			binding: ExternalAccountBinding{
+				KeyIdentifier: "rubbish",
+				MacKey:        "rubbish",
+				Algorithm:     "rubbish",
+			},
+			expectsError: true,
+			errorStr:     "no HashFunc set",
+		},
+		{
+			name: "unknown key type",
+			binding: ExternalAccountBinding{
+				KeyIdentifier: "rubbish",
+				MacKey:        "rubbish",
+				Algorithm:     "rubbish",
+				HashFunc:      crypto.SHA256,
+			},
+			signer:       errSigner{},
+			expectsError: true,
+			errorStr:     "unknown key type",
+		},
+		{
+			name: "invalid mac",
+			binding: ExternalAccountBinding{
+				KeyIdentifier: "rubbish",
+				MacKey:        "!!!!",
+				Algorithm:     "rubbish",
+				HashFunc:      crypto.SHA256,
+			},
+			signer:       makePrivateKey(t),
+			expectsError: true,
+			errorStr:     "error decoding mac",
+		},
+		{
+			name: "ok",
+			binding: ExternalAccountBinding{
+				KeyIdentifier: "rubbish",
+				MacKey:        "rubbish",
+				Algorithm:     "rubbish",
+				HashFunc:      crypto.SHA256,
+			},
+			signer:  makePrivateKey(t),
+			account: &Account{},
+			request: &NewAccountRequest{},
+		},
+	}
+
+	for i, ct := range tests {
+		f := NewAcctOptExternalAccountBinding(ct.binding)
+		err := f(ct.signer, ct.account, ct.request, ct.client)
+		if ct.expectsError && err == nil {
+			t.Errorf("decodeCertificateChain test %d %q expected error, got none", i, ct.name)
+		}
+		if !ct.expectsError && err != nil {
+			t.Errorf("decodeCertificateChain test %d %q expected no error, got: %v", i, ct.name, err)
+		}
+		if err != nil && ct.errorStr != "" && !strings.Contains(err.Error(), ct.errorStr) {
+			t.Errorf("AccoudecodeCertificateChainntKeyChange test %d %q error doesnt contain %q: %s", i, ct.name, ct.errorStr, err.Error())
+		}
 	}
 }
