@@ -137,6 +137,17 @@ func main() {
 			log.Fatalf("Error writing authorization %s challenge file %q: %v", auth.Identifier.Value, tokenFile, err)
 		}
 
+		/*
+			If you wanted to use a DNS-01 challenge you would extract the challenge object,
+			chal, ok: = auth.ChallengeMap[acme.ChallengeTypeDNS01]
+
+			You then need to base64 encode the challenge key authorisation for which a helper function is included,
+			txt := acme.EncodeDNS01KeyAuthorization(chal.KeyAuthorization)
+
+			This txt value is what you then place in the DNS TXT record for "_acme-challenge.[YOURDOMAIN]" before
+			continuing to update the challenge.
+		*/
+
 		// update the acme server that the challenge file is ready to be queried
 		log.Printf("Updating challenge for authorization %s: %s", auth.Identifier.Value, chal.URL)
 		chal, err = client.UpdateChallenge(account, chal)
