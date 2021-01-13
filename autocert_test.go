@@ -4,13 +4,9 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
-	"encoding/pem"
 	"fmt"
-	"io/ioutil"
-	"mime"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"os"
 	"reflect"
 	"strings"
@@ -149,64 +145,12 @@ func TestAutoCert_checkHost(t *testing.T) {
 
 func TestAutoCert_getExistingCert(t *testing.T) {
 	ac := AutoCert{}
-	if cert := ac.getExistingCert("fake"); cert != nil {
+	if cert, _ := ac.getExistingCert("fake"); cert != nil {
 		t.Fatalf("expected nil cert, got: %+v", cert)
 	}
 }
 
-func fetchRoot() []byte {
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	httpClient := &http.Client{Transport: tr}
-
-	getBody := func(rootURL string) []byte {
-		resp, err := httpClient.Get(rootURL)
-		if err != nil {
-			return nil
-		}
-		defer resp.Body.Close()
-		if resp.StatusCode != http.StatusOK {
-			return nil
-		}
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return nil
-		}
-		mediaType, _, err := mime.ParseMediaType(resp.Header.Get("Content-Type"))
-		if err != nil {
-			panic(err)
-		}
-		switch mediaType {
-		case "application/pem-certificate-chain":
-			return body
-		case "application/pkix-cert":
-			return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: body})
-		}
-		panic(rootURL + " unsupported content type: " + mediaType)
-	}
-
-	baseURL, err := url.Parse(testClient.Directory().URL)
-	if err != nil {
-		panic(err)
-	}
-
-	urls := []string{
-		fmt.Sprintf("%s://%s:%d/roots/0", baseURL.Scheme, baseURL.Hostname(), 15000),
-		fmt.Sprintf("%s://%s/acme/issuer-cert", baseURL.Scheme, baseURL.Host),
-	}
-
-	for _, u := range urls {
-		if root := getBody(u); len(root) > 0 {
-			return root
-		}
-	}
-
-	panic("no root certificate")
-}
-
 func TestAutoCert_GetCertificate2(t *testing.T) {
-
 	root := fetchRoot()
 
 	doPost := func(name string, req interface{}) {
@@ -235,7 +179,7 @@ func TestAutoCert_GetCertificate2(t *testing.T) {
 		},
 	}
 
-	cert, err := ac.GetCertificate(&tls.ClientHelloInfo{ServerName: "test.com"})
+	cert, err := ac.GetCertificate(&tls.ClientHelloInfo{ServerName: randString() + ".com"})
 	if err != nil {
 		t.Fatalf("error getting certificate: %v", err)
 	}

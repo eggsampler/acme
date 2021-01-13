@@ -6,21 +6,26 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	crand "crypto/rand"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
+	"io/ioutil"
 	"log"
 	mrand "math/rand"
+	"mime"
 	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
 
 type clientMeta struct {
 	Software string
-	RootCert string
 	Options  []OptionFunc
 }
 
@@ -53,15 +58,18 @@ func init() {
 		return
 	}
 
+	roots := fetchRoot()
+	pool := x509.NewCertPool()
+	pool.AppendCertsFromPEM(roots)
+
 	directories := map[string]clientMeta{
 		"https://localhost:14000/dir": {
 			Software: clientPebble,
-			RootCert: "https://localhost:15000/roots/0",
-			Options:  []OptionFunc{WithInsecureSkipVerify()},
+			Options:  []OptionFunc{WithRootCerts(pool)},
 		},
 		"https://localhost:4431/directory": {
 			Software: clientBoulder,
-			Options:  []OptionFunc{WithInsecureSkipVerify()},
+			Options:  []OptionFunc{WithRootCerts(pool)},
 		},
 		"http://localhost:4001/directory": {
 			Software: clientBoulder,
@@ -311,4 +319,86 @@ func postChallenge(auth Authorization, chal Challenge) {
 	default:
 		panic("post: unsupported challenge type: " + chal.Type)
 	}
+}
+
+func fetchRoot() []byte {
+	var certPaths []string
+	var certsPem []string
+
+	boulderPath := os.Getenv("BOULDER_PATH")
+	if boulderPath == "" {
+		home, _ := os.UserHomeDir()
+		if home == "" {
+			return nil
+		}
+		boulderPath = filepath.Join(home, "go", "src", "github.com", "letsencrypt", "boulder")
+	}
+
+	certPaths = append(certPaths, filepath.Join(boulderPath, "temp", "root-cert-ecdsa.pem"))
+	certPaths = append(certPaths, filepath.Join(boulderPath, "temp", "root-cert-rsa.pem"))
+
+	pebblePath := os.Getenv("PEBBLE_PATH")
+	if pebblePath == "" {
+		home, _ := os.UserHomeDir()
+		if home == "" {
+			return nil
+		}
+		pebblePath = filepath.Join(home, "go", "src", "github.com", "letsencrypt", "pebble")
+	}
+
+	// these certs are the ones used for the web server, not signing
+	certPaths = append(certPaths, filepath.Join(pebblePath, "test", "certs", "pebble.minica.pem"))
+	certPaths = append(certPaths, filepath.Join(pebblePath, "test", "certs", "localhost", "cert.pem"))
+
+	for _, v := range certPaths {
+		bPem, err := ioutil.ReadFile(v)
+		if err != nil {
+			log.Printf("error reading: %s", v)
+			continue
+		}
+		certsPem = append(certsPem, strings.TrimSpace(string(bPem)))
+	}
+
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	httpClient := &http.Client{Transport: tr}
+
+	i := 0
+	for {
+		// these are the signing roots
+		pebbleRootURL := fmt.Sprintf("https://localhost:15000/roots/%d", i)
+		i++
+		resp, err := httpClient.Get(pebbleRootURL)
+		if err != nil {
+			break
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			break
+		}
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			break
+		}
+		mediaType, _, err := mime.ParseMediaType(resp.Header.Get("Content-Type"))
+		if err != nil {
+			panic(err)
+		}
+		switch mediaType {
+		case "application/pem-certificate-chain":
+			certsPem = append(certsPem, strings.TrimSpace(string(body)))
+		case "application/pkix-cert":
+			bPem := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: body})
+			certsPem = append(certsPem, strings.TrimSpace(string(bPem)))
+		default:
+			panic(pebbleRootURL + " unsupported content type: " + mediaType)
+		}
+	}
+
+	if len(certsPem) == 0 {
+		return nil
+	}
+
+	return []byte(strings.Join(certsPem, "\n"))
 }

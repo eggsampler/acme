@@ -53,7 +53,8 @@ boulder_setup:
 	git clone --depth 1 https://github.com/letsencrypt/boulder.git $(BOULDER_PATH) \
 		|| (cd $(BOULDER_PATH); git checkout -f main && git reset --hard HEAD && git pull -q)
 	docker-compose -f $(BOULDER_PATH)/docker-compose.yml down
-	sed -i -e 's/test\/config$$/test\/config-next/' $(BOULDER_PATH)/docker-compose.yml
+	patch -p1 $(BOULDER_PATH)/docker-compose.yml boulder-docker-compose.diff
+	rm -rf $(BOULDER_PATH)/temp
 
 # runs an instance of boulder
 boulder_start:

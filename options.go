@@ -4,6 +4,7 @@ import (
 	"crypto"
 	"crypto/hmac"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -70,6 +71,18 @@ func WithHTTPClient(httpClient *http.Client) OptionFunc {
 			return errors.New("client must not be nil")
 		}
 		client.httpClient = httpClient
+		return nil
+	}
+}
+
+// WithRootCerts sets the httpclient transport to use a given certpool for root certs
+func WithRootCerts(pool *x509.CertPool) OptionFunc {
+	return func(client *Client) error {
+		client.httpClient.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{
+				RootCAs: pool,
+			},
+		}
 		return nil
 	}
 }
