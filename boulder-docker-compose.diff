@@ -1,0 +1,21 @@
+diff --git a/docker-compose.yml b/docker-compose.yml
+index 2c93b96..1b29cf2 100644
+--- a/docker-compose.yml
++++ b/docker-compose.yml
+@@ -5,7 +5,7 @@ services:
+         image: letsencrypt/boulder-tools-go${TRAVIS_GO_VERSION:-1.15.5}:2020-11-20
+         environment:
+             - FAKE_DNS=10.77.77.77
+-            - BOULDER_CONFIG_DIR=test/config
++            - BOULDER_CONFIG_DIR=test/config-next
+             - GOFLAGS=-mod=vendor
+             # This is required so Python doesn't throw an error when printing
+             # non-ASCII to stdout.
+@@ -17,6 +17,7 @@ services:
+             - INT_FILTER
+             - RACE
+         volumes:
++          - ./temp:/tmp
+           - .:/go/src/github.com/letsencrypt/boulder:cached
+           - ./.gocache:/root/.cache/go-build:cached
+         networks:
