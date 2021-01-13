@@ -108,18 +108,11 @@ GGnm6rb+NnWR9DIopM0nKNkToWoF/hzopxu4Ae/GsQ==
 )
 
 var (
-	testKey      *rsa.PrivateKey
-	testKeyEC    *ecdsa.PrivateKey
-	testKeyEC384 *ecdsa.PrivateKey
-	testKeyEC512 *ecdsa.PrivateKey
-)
-
-func init() {
-	testKey = parseRSA(testKeyPEM, "testKeyPEM")
-	testKeyEC = parseEC(testKeyECPEM, "testKeyECPEM")
+	testKey      = parseRSA(testKeyPEM, "testKeyPEM")
+	testKeyEC    = parseEC(testKeyECPEM, "testKeyECPEM")
 	testKeyEC384 = parseEC(testKeyEC384PEM, "testKeyEC384PEM")
 	testKeyEC512 = parseEC(testKeyEC512PEM, "testKeyEC512PEM")
-}
+)
 
 func decodePEM(s, name string) []byte {
 	d, _ := pem.Decode([]byte(s))
