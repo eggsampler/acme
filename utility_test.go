@@ -40,7 +40,7 @@ var (
 	testClientMeta clientMeta
 )
 
-func init() {
+func TestMain(m *testing.M) {
 	mrand.Seed(time.Now().UnixNano())
 	var err error
 
@@ -86,10 +86,11 @@ func init() {
 		testClientMeta = v
 
 		log.Printf("using %s directory at: %s", v.Software, k)
-		return
+
+		os.Exit(m.Run())
 	}
 
-	panic("no acme ca available")
+	log.Fatal("no acme ca available")
 }
 
 func randString() string {
