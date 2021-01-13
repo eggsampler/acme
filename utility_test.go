@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"go/build"
 	"io/ioutil"
 	"log"
 	mrand "math/rand"
@@ -321,31 +322,35 @@ func postChallenge(auth Authorization, chal Challenge) {
 	}
 }
 
+func getPath(env, folder string) string {
+	p := os.Getenv(env)
+	if p != "" {
+		return p
+	}
+	p = os.Getenv("GOPATH")
+	if p != "" {
+		return filepath.Join(p, "src", "github.com", "letsencrypt", folder)
+	}
+	p = build.Default.GOPATH
+	if p != "" {
+		return filepath.Join(p, "src", "github.com", "letsencrypt", folder)
+	}
+	home, _ := os.UserHomeDir()
+	if home != "" {
+		return filepath.Join(home, "go", "src", "github.com", "letsencrypt", folder)
+	}
+	return ""
+}
+
 func fetchRoot() []byte {
 	var certPaths []string
 	var certsPem []string
 
-	boulderPath := os.Getenv("BOULDER_PATH")
-	if boulderPath == "" {
-		home, _ := os.UserHomeDir()
-		if home == "" {
-			return nil
-		}
-		boulderPath = filepath.Join(home, "go", "src", "github.com", "letsencrypt", "boulder")
-	}
-
+	boulderPath := getPath("BOULDER_PATH", "boulder")
 	certPaths = append(certPaths, filepath.Join(boulderPath, "temp", "root-cert-ecdsa.pem"))
 	certPaths = append(certPaths, filepath.Join(boulderPath, "temp", "root-cert-rsa.pem"))
 
-	pebblePath := os.Getenv("PEBBLE_PATH")
-	if pebblePath == "" {
-		home, _ := os.UserHomeDir()
-		if home == "" {
-			return nil
-		}
-		pebblePath = filepath.Join(home, "go", "src", "github.com", "letsencrypt", "pebble")
-	}
-
+	pebblePath := getPath("PEBBLE_PATH", "pebble")
 	// these certs are the ones used for the web server, not signing
 	certPaths = append(certPaths, filepath.Join(pebblePath, "test", "certs", "pebble.minica.pem"))
 	certPaths = append(certPaths, filepath.Join(pebblePath, "test", "certs", "localhost", "cert.pem"))
