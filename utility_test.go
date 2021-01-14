@@ -336,9 +336,9 @@ func getPath(env, folder string) string {
 	if p != "" {
 		return filepath.Join(p, "src", "github.com", "letsencrypt", folder)
 	}
-	home, _ := os.UserHomeDir()
-	if home != "" {
-		return filepath.Join(home, "go", "src", "github.com", "letsencrypt", folder)
+	p = os.Getenv("HOME")
+	if p != "" {
+		return filepath.Join(p, "go", "src", "github.com", "letsencrypt", folder)
 	}
 	return ""
 }
