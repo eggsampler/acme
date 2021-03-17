@@ -30,7 +30,7 @@ pebble_setup:
 	mkdir -p $(PEBBLE_PATH)
 	-git clone --depth 1 https://github.com/letsencrypt/pebble.git $(PEBBLE_PATH)
 	(cd $(PEBBLE_PATH); git checkout -f master && git reset --hard HEAD && git pull -q)
-	docker-compose -f $(PEBBLE_PATH)/docker-compose.yml down
+	make pebble_stop
 
 # runs an instance of pebble using docker
 pebble_start:
@@ -52,12 +52,12 @@ boulder_setup:
 	mkdir -p $(BOULDER_PATH)
 	-git clone --depth 1 https://github.com/letsencrypt/boulder.git $(BOULDER_PATH)
 	(cd $(BOULDER_PATH); git checkout -f main && git reset --hard HEAD && git pull -q)
-	docker-compose -f $(BOULDER_PATH)/docker-compose.yml -f $(BOULDER_PATH)/docker-compose.next.yml down
+	make boulder_stop
 	rm -rf $(BOULDER_PATH)/temp
 
 # runs an instance of boulder
 boulder_start:
-	docker-compose -f $(BOULDER_PATH)/docker-compose.yml up -d
+	docker-compose -f $(BOULDER_PATH)/docker-compose.yml -f $(BOULDER_PATH)/docker-compose.next.yml -f docker-compose.boulder-temp.yml up -d
 
 # waits until boulder responds
 boulder_wait:
@@ -65,4 +65,4 @@ boulder_wait:
 
 # stops the running docker instance
 boulder_stop:
-	docker-compose -f $(BOULDER_PATH)/docker-compose.yml down
+	docker-compose -f $(BOULDER_PATH)/docker-compose.yml -f $(BOULDER_PATH)/docker-compose.next.yml -f docker-compose.boulder-temp.yml down
