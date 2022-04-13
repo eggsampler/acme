@@ -1,6 +1,6 @@
 // Copyright 2015 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
-// license that can be found in the THIRD-PARTY file.
+// license that can be found in the LICENSE file.
 
 package acme
 
@@ -63,7 +63,7 @@ EQeIP6dZtv8IMgtGIb91QX9pXvP0aznzQKwYIA8nZgoENCPfiMTPiEDT9e/0lObO
 `
 
 	// This thumbprint is for the testKey defined above.
-	// testKeyThumbprint = "6nicxzh6WETQlrvdchkz-U3e3DOQZ4heJKU63rfqMqQ"
+	testKeyThumbprint = "6nicxzh6WETQlrvdchkz-U3e3DOQZ4heJKU63rfqMqQ"
 
 	// openssl ecparam -name secp256k1 -genkey -noout
 	testKeyECPEM = `
@@ -104,15 +104,22 @@ GGnm6rb+NnWR9DIopM0nKNkToWoF/hzopxu4Ae/GsQ==
 
 	// echo -n '{"crv":"P-256","kty":"EC","x":"<testKeyECPubX>","y":"<testKeyECPubY>"}' | \
 	// openssl dgst -binary -sha256 | b64raw
-	// testKeyECThumbprint = "zedj-Bd1Zshp8KLePv2MB-lJ_Hagp7wAwdkA0NUTniU"
+	testKeyECThumbprint = "zedj-Bd1Zshp8KLePv2MB-lJ_Hagp7wAwdkA0NUTniU"
 )
 
 var (
-	testKey      = parseRSA(testKeyPEM, "testKeyPEM")
-	testKeyEC    = parseEC(testKeyECPEM, "testKeyECPEM")
+	testKey      *rsa.PrivateKey
+	testKeyEC    *ecdsa.PrivateKey
+	testKeyEC384 *ecdsa.PrivateKey
+	testKeyEC512 *ecdsa.PrivateKey
+)
+
+func init() {
+	testKey = parseRSA(testKeyPEM, "testKeyPEM")
+	testKeyEC = parseEC(testKeyECPEM, "testKeyECPEM")
 	testKeyEC384 = parseEC(testKeyEC384PEM, "testKeyEC384PEM")
 	testKeyEC512 = parseEC(testKeyEC512PEM, "testKeyEC512PEM")
-)
+}
 
 func decodePEM(s, name string) []byte {
 	d, _ := pem.Decode([]byte(s))
@@ -189,7 +196,7 @@ func TestJWSEncodeJSON(t *testing.T) {
 }
 
 func TestJWSEncodeKID(t *testing.T) {
-	kid := keyID("https://example.org/account/1")
+	kid := KeyID("https://example.org/account/1")
 	claims := struct{ Msg string }{"Hello JWS"}
 	// JWS signed with testKeyEC
 	const (
@@ -369,7 +376,7 @@ func TestJWSEncodeJSONCustom(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			var j struct{ Protected, Payload, Signature string }
+			var j jsonWebSignature
 			if err := json.Unmarshal(b, &j); err != nil {
 				t.Fatal(err)
 			}
@@ -379,10 +386,53 @@ func TestJWSEncodeJSONCustom(t *testing.T) {
 			if j.Payload != payload {
 				t.Errorf("j.Payload = %q\nwant %q", j.Payload, payload)
 			}
-			if j.Signature != tc.jwsig {
-				t.Errorf("j.Signature = %q\nwant %q", j.Signature, tc.jwsig)
+			if j.Sig != tc.jwsig {
+				t.Errorf("j.Sig = %q\nwant %q", j.Sig, tc.jwsig)
 			}
 		})
+	}
+}
+
+func TestJWSWithMAC(t *testing.T) {
+	// Example from RFC 7520 Section 4.4.3.
+	// https://tools.ietf.org/html/rfc7520#section-4.4.3
+	b64Key := "hJtXIZ2uSN5kbQfbtTNWbpdmhkV8FJG-Onbc6mxCcYg"
+	rawPayload := []byte("It\xe2\x80\x99s a dangerous business, Frodo, going out your " +
+		"door. You step onto the road, and if you don't keep your feet, " +
+		"there\xe2\x80\x99s no knowing where you might be swept off " +
+		"to.")
+	protected := "eyJhbGciOiJIUzI1NiIsImtpZCI6IjAxOGMwYWU1LTRkOWItNDcxYi1iZmQ2LW" +
+		"VlZjMxNGJjNzAzNyJ9"
+	payload := "SXTigJlzIGEgZGFuZ2Vyb3VzIGJ1c2luZXNzLCBGcm9kbywg" +
+		"Z29pbmcgb3V0IHlvdXIgZG9vci4gWW91IHN0ZXAgb250byB0aGUgcm9h" +
+		"ZCwgYW5kIGlmIHlvdSBkb24ndCBrZWVwIHlvdXIgZmVldCwgdGhlcmXi" +
+		"gJlzIG5vIGtub3dpbmcgd2hlcmUgeW91IG1pZ2h0IGJlIHN3ZXB0IG9m" +
+		"ZiB0by4"
+	sig := "s0h6KThzkfBBBkLspW1h84VsJZFTsPPqMDA7g1Md7p0"
+
+	key, err := base64.RawURLEncoding.DecodeString(b64Key)
+	if err != nil {
+		t.Fatalf("unable to decode key: %q", b64Key)
+	}
+	got, err := jwsWithMAC(key, "018c0ae5-4d9b-471b-bfd6-eef314bc7037", "", rawPayload)
+	if err != nil {
+		t.Fatalf("jwsWithMAC() = %q", err)
+	}
+	if got.Protected != protected {
+		t.Errorf("got.Protected = %q\nwant %q", got.Protected, protected)
+	}
+	if got.Payload != payload {
+		t.Errorf("got.Payload = %q\nwant %q", got.Payload, payload)
+	}
+	if got.Sig != sig {
+		t.Errorf("got.Signature = %q\nwant %q", got.Sig, sig)
+	}
+}
+
+func TestJWSWithMACError(t *testing.T) {
+	p := "{}"
+	if _, err := jwsWithMAC(nil, "", "", []byte(p)); err == nil {
+		t.Errorf("jwsWithMAC(nil, ...) = success; want err")
 	}
 }
 
@@ -456,7 +506,7 @@ func TestJWKThumbprintEC(t *testing.T) {
 
 func TestJWKThumbprintErrUnsupportedKey(t *testing.T) {
 	_, err := JWKThumbprint(struct{}{})
-	if err != errUnsupportedKey {
-		t.Errorf("err = %q; want %q", err, errUnsupportedKey)
+	if err != ErrUnsupportedKey {
+		t.Errorf("err = %q; want %q", err, ErrUnsupportedKey)
 	}
 }
