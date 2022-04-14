@@ -348,8 +348,10 @@ func fetchRoot() []byte {
 	var certsPem []string
 
 	boulderPath := getPath("BOULDER_PATH", "boulder")
-	certPaths = append(certPaths, filepath.Join(boulderPath, "temp", "root-cert-ecdsa.pem"))
-	certPaths = append(certPaths, filepath.Join(boulderPath, "temp", "root-cert-rsa.pem"))
+	certPaths = append(certPaths, filepath.Join(boulderPath, ".hierarchy", "root-cert-ecdsa.pem"))
+	certPaths = append(certPaths, filepath.Join(boulderPath, ".hierarchy", "root-cert-rsa.pem"))
+
+	certPaths = append(certPaths, filepath.Join(boulderPath, "test", "wfe-tls", "minica.pem"))
 
 	pebblePath := getPath("PEBBLE_PATH", "pebble")
 	// these certs are the ones used for the web server, not signing
@@ -362,7 +364,7 @@ func fetchRoot() []byte {
 			log.Printf("error reading: %s", v)
 			continue
 		}
-		certsPem = append(certsPem, strings.TrimSpace(string(bPem)))
+		certsPem = append(certsPem, "# "+v+"\n"+strings.TrimSpace(string(bPem)))
 	}
 
 	tr := &http.Transport{
