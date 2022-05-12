@@ -31,7 +31,7 @@ pebble: pebble_setup pebble_start pebble_wait test pebble_stop
 pebble_setup:
 	mkdir -p $(PEBBLE_PATH)
 	-git clone --depth 1 https://github.com/letsencrypt/pebble.git $(PEBBLE_PATH)
-	(cd $(PEBBLE_PATH); git checkout -f master && git reset --hard HEAD && git pull -q)
+	(cd $(PEBBLE_PATH); git checkout -f main && git reset --hard HEAD && git pull -q)
 	make pebble_stop
 
 # runs an instance of pebble using docker
