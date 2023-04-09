@@ -42,12 +42,13 @@ const (
 // Directory object as returned from the client's directory url upon creation of client.
 // See https://tools.ietf.org/html/rfc8555#section-7.1.1
 type Directory struct {
-	NewNonce   string `json:"newNonce"`   // url to new nonce endpoint
-	NewAccount string `json:"newAccount"` // url to new account endpoint
-	NewOrder   string `json:"newOrder"`   // url to new order endpoint
-	NewAuthz   string `json:"newAuthz"`   // url to new authz endpoint
-	RevokeCert string `json:"revokeCert"` // url to revoke cert endpoint
-	KeyChange  string `json:"keyChange"`  // url to key change endpoint
+	NewNonce    string `json:"newNonce"`    // url to new nonce endpoint
+	NewAccount  string `json:"newAccount"`  // url to new account endpoint
+	NewOrder    string `json:"newOrder"`    // url to new order endpoint
+	NewAuthz    string `json:"newAuthz"`    // url to new authz endpoint
+	RevokeCert  string `json:"revokeCert"`  // url to revoke cert endpoint
+	KeyChange   string `json:"keyChange"`   // url to key change endpoint
+	RenewalInfo string `json:"renewalInfo"` // url to renewal info endpoint
 
 	// meta object containing directory metadata
 	Meta struct {
@@ -108,9 +109,10 @@ type Account struct {
 // external account binding.
 // The MacKey is a base64url-encoded string.
 // Algorithm is a "MAC-based algorithm" as per RFC8555. Typically this is either,
-//  - "HS256" for HashFunc: crypto.SHA256
-//  - "HS384" for HashFunc: crypto.SHA384
-//  - "HS512" for HashFunc: crypto.SHA512
+//   - "HS256" for HashFunc: crypto.SHA256
+//   - "HS384" for HashFunc: crypto.SHA384
+//   - "HS512" for HashFunc: crypto.SHA512
+//
 // However this is dependant on the acme server in question and is provided here to give more options for future compatibility.
 type ExternalAccountBinding struct {
 	KeyIdentifier string      `json:"-"`
