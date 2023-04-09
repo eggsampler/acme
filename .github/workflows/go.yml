@@ -59,11 +59,11 @@ jobs:
         uses: shogo82148/actions-goveralls@v1
         with:
           path-to-profile: coverage-boulder.out
-          flag-name: pebble-${{ matrix.go-version }}
+          flag-name: boulder-${{ matrix.go-version }}
           parallel: true
 
   finish:
-    needs: test
+    needs: [test-pebble, test-boulder]
     runs-on: ubuntu-latest
     steps:
       - uses: shogo82148/actions-goveralls@v1
