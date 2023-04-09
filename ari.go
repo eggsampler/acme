@@ -19,6 +19,7 @@ import (
 )
 
 type (
+	// RenewalInfo is returned by Client.GetRenewalInfo
 	RenewalInfo struct {
 		SuggestedWindow struct {
 			Start time.Time `json:"start"`
@@ -29,6 +30,8 @@ type (
 )
 
 var (
+	// ErrRenewalInfoNotSupported is returned by Client.GetRenewalInfo and Client.UpdateRenewalInfo if the renewal info
+	// entry isn't present on the acme directory (ie, it's not supported by the acme server)
 	ErrRenewalInfoNotSupported = errors.New("renewal information endpoint not")
 
 	// from https://cs.opensource.google/go/x/crypto/+/refs/tags/v0.8.0:ocsp/ocsp.go;l=156
@@ -39,6 +42,7 @@ var (
 		crypto.SHA512: asn1.ObjectIdentifier([]int{2, 16, 840, 1, 101, 3, 4, 2, 3}),
 	}
 
+	// hashNames exists because go 1.11 doesn't have crypto.Hash.String()
 	hashNames = map[crypto.Hash]string{
 		crypto.SHA1:   "SHA1",
 		crypto.SHA256: "SHA256",
@@ -114,6 +118,7 @@ func (c Client) UpdateRenewalInfo(account Account, cert, issuer *x509.Certificat
 	return err
 }
 
+// generateCertID creates a CertID as per RFC6960
 func generateCertID(cert, issuer *x509.Certificate, hashFunc crypto.Hash) (string, error) {
 	oid, ok := hashOIDs[hashFunc]
 	if !ok {
