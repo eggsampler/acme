@@ -1,0 +1,71 @@
+name: Go
+
+on:
+  push:
+    branches: [ "*" ]
+  schedule:
+    - cron: "0 0 1 * *"
+
+jobs:
+
+  build-examples:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: [ '1.11', 'stable' ]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Go ${{ matrix.go-version }}
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ matrix.go-version }}
+      - name: make examples
+        run: make examples
+
+  test-pebble:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: [ '1.11', 'stable' ]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ matrix.go-version }}
+      - name: make pebble ${{ matrix.go-version }}
+        run: make pebble
+      - name: Send pebble coverage ${{ matrix.go-version }}
+        uses: shogo82148/actions-goveralls@v1
+        with:
+          path-to-profile: coverage-pebble.out
+          flag-name: pebble-${{ matrix.go-version }}
+          parallel: true
+
+  test-boulder:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: [ '1.11', 'stable' ]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ matrix.go-version }}
+      - name: make boulder ${{ matrix.go-version }}
+        run: make boulder
+      - name: Send boulder coverage ${{ matrix.go-version }}
+        uses: shogo82148/actions-goveralls@v1
+        with:
+          path-to-profile: coverage-boulder.out
+          flag-name: pebble-${{ matrix.go-version }}
+          parallel: true
+
+  finish:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: shogo82148/actions-goveralls@v1
+        with:
+          parallel-finished: true
