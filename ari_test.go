@@ -9,6 +9,11 @@ import (
 )
 
 func TestClient_GetRenewalInfo(t *testing.T) {
+	if testClientMeta.Software == clientPebble {
+		t.Skip("pebble doesnt support ari")
+		return
+	}
+
 	account, order, _ := makeOrderFinalised(t, nil)
 	if order.Certificate == "" {
 		t.Fatalf("no certificate: %+v", order)
@@ -39,6 +44,11 @@ func TestClient_GetRenewalInfo(t *testing.T) {
 }
 
 func TestClient_UpdateRenewalInfo(t *testing.T) {
+	if testClientMeta.Software == clientPebble {
+		t.Skip("pebble doesnt support ari")
+		return
+	}
+
 	account, order, _ := makeOrderFinalised(t, nil)
 	if order.Certificate == "" {
 		t.Fatalf("no certificate: %+v", order)
