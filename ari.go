@@ -2,6 +2,9 @@ package acme
 
 import (
 	"crypto"
+	_ "crypto/sha1"
+	_ "crypto/sha256"
+	_ "crypto/sha512"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
@@ -27,6 +30,21 @@ type (
 
 var (
 	ErrRenewalInfoNotSupported = errors.New("renewal information endpoint not")
+
+	// from https://cs.opensource.google/go/x/crypto/+/refs/tags/v0.8.0:ocsp/ocsp.go;l=156
+	hashOIDs = map[crypto.Hash]asn1.ObjectIdentifier{
+		crypto.SHA1:   asn1.ObjectIdentifier([]int{1, 3, 14, 3, 2, 26}),
+		crypto.SHA256: asn1.ObjectIdentifier([]int{2, 16, 840, 1, 101, 3, 4, 2, 1}),
+		crypto.SHA384: asn1.ObjectIdentifier([]int{2, 16, 840, 1, 101, 3, 4, 2, 2}),
+		crypto.SHA512: asn1.ObjectIdentifier([]int{2, 16, 840, 1, 101, 3, 4, 2, 3}),
+	}
+
+	hashNames = map[crypto.Hash]string{
+		crypto.SHA1:   "SHA1",
+		crypto.SHA256: "SHA256",
+		crypto.SHA384: "SHA384",
+		crypto.SHA512: "SHA512",
+	}
 )
 
 // GetRenewalInfo returns the renewal information (if present and supported by the ACME server), and
@@ -39,7 +57,7 @@ func (c Client) GetRenewalInfo(cert, issuer *x509.Certificate, hash crypto.Hash)
 
 	certID, err := generateCertID(cert, issuer, hash)
 	if err != nil {
-		return RenewalInfo{}, time.Time{}, fmt.Errorf("error generating certificate id: %w", err)
+		return RenewalInfo{}, time.Time{}, fmt.Errorf("error generating certificate id: %v", err)
 	}
 
 	renewalURL := c.dir.RenewalInfo
@@ -80,7 +98,7 @@ func (c Client) UpdateRenewalInfo(account Account, cert, issuer *x509.Certificat
 
 	certID, err := generateCertID(cert, issuer, hash)
 	if err != nil {
-		return fmt.Errorf("error generating certificate id: %w", err)
+		return fmt.Errorf("error generating certificate id: %v", err)
 	}
 
 	updateReq := struct {
@@ -100,10 +118,10 @@ func generateCertID(cert, issuer *x509.Certificate, hashFunc crypto.Hash) (strin
 	oid, ok := hashOIDs[hashFunc]
 	if !ok {
 		var s []string
-		for k, _ := range hashOIDs {
-			s = append(s, k.String())
+		for k := range hashOIDs {
+			s = append(s, hashNames[k])
 		}
-		return "", fmt.Errorf("unsupported hash algorithm %q, currently available: %q", hashFunc.String(), strings.Join(s, ","))
+		return "", fmt.Errorf("unsupported hash algorithm %q, currently available: %q", hashNames[hashFunc], strings.Join(s, ","))
 	}
 
 	if !hashFunc.Available() {
@@ -145,12 +163,4 @@ func generateCertID(cert, issuer *x509.Certificate, hashFunc crypto.Hash) (strin
 	}
 	b, err := asn1.Marshal(s)
 	return strings.TrimRight(base64.URLEncoding.EncodeToString(b), "="), err
-}
-
-// from https://cs.opensource.google/go/x/crypto/+/refs/tags/v0.8.0:ocsp/ocsp.go;l=156
-var hashOIDs = map[crypto.Hash]asn1.ObjectIdentifier{
-	crypto.SHA1:   asn1.ObjectIdentifier([]int{1, 3, 14, 3, 2, 26}),
-	crypto.SHA256: asn1.ObjectIdentifier([]int{2, 16, 840, 1, 101, 3, 4, 2, 1}),
-	crypto.SHA384: asn1.ObjectIdentifier([]int{2, 16, 840, 1, 101, 3, 4, 2, 2}),
-	crypto.SHA512: asn1.ObjectIdentifier([]int{2, 16, 840, 1, 101, 3, 4, 2, 3}),
 }
