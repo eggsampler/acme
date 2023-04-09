@@ -1,0 +1,53 @@
+name: Go
+
+on:
+  push:
+    branches: [ "*" ]
+  pull_request:
+    branches: [ "*" ]
+  schedule:
+    - cron: "0 0 1 * *"
+
+jobs:
+
+  build-examples:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: [ '1.11', 'stable' ]
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Go ${{ matrix.go-version }}
+      uses: actions/setup-go@v3
+      with:
+        go-version: ${{ matrix.go-version }}
+    - name: make examples
+      run: make examples
+      
+  test-pebble:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: [ '1.11', 'stable' ]
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: ${{ matrix.go-version }}
+    - name: make pebble
+      run: make pebble
+      
+  test-boulder:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: [ '1.11', 'stable' ]
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: ${{ matrix.go-version }}
+    - name: make boulder
+      run: make boulder
