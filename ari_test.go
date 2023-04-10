@@ -4,7 +4,6 @@ import (
 	"crypto"
 	"crypto/x509"
 	"encoding/pem"
-	"reflect"
 	"testing"
 	"time"
 )
@@ -215,7 +214,7 @@ func Test_parseRetryAfter(t *testing.T) {
 				t.Errorf("parseRetryAfter() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
+			if !got.Equal(tt.want) {
 				t.Errorf("parseRetryAfter() got = %v, want %v", got, tt.want)
 			}
 		})
