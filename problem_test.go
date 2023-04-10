@@ -57,7 +57,7 @@ func TestProblem_Error(t *testing.T) {
 			{
 				Type:       "type2",
 				Detail:     "detail",
-				Identifier: Identifier{"DNS", "example.com"},
+				Identifier: Identifier{"DNS", randString() + ".com"},
 			},
 		},
 	}

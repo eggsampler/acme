@@ -102,7 +102,7 @@ func TestClient_Directory(t *testing.T) {
 }
 
 func TestClient_Fetch(t *testing.T) {
-	_, account1order, _ := makeOrderFinalised(t, []string{ChallengeTypeDNS01}, Identifier{"dns", "example.com"})
+	_, account1order, _ := makeOrderFinalised(t, []string{ChallengeTypeDNS01}, Identifier{"dns", randString() + ".com"})
 	account2 := makeAccount(t)
 	err := testClient.Fetch(account2, account1order.URL, &Account{})
 	if err == nil {
