@@ -79,6 +79,12 @@ type Client struct {
 	// The time between checking if a challenge has been updated or a certificate has been issued.
 	// Default 0.5 seconds if duration is not set or if set to 0.
 	PollInterval time.Duration
+
+	// IgnorePolling does not use any simple polling in order finalisation
+	IgnorePolling bool
+
+	// IgnoreRetryAfter does not use the retry-after header in order finalisation
+	IgnoreRetryAfter bool
 }
 
 // Account structure representing fields in an account object.
@@ -144,6 +150,9 @@ type Order struct {
 	// URL for the order object.
 	// Provided by the rel="Location" Link http header
 	URL string `json:"-"`
+
+	// RetryAfter is the http Retry-After header from the order response
+	RetryAfter time.Time `json:"-"`
 }
 
 // Authorization object returned when fetching an authorization in an order.

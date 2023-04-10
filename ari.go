@@ -26,6 +26,8 @@ type (
 			End   time.Time `json:"end"`
 		} `json:"suggestedWindow"`
 		ExplanationURL string `json:"explanationURL"`
+
+		RetryAfter time.Time `json:"-"`
 	}
 )
 
@@ -53,15 +55,15 @@ var (
 
 // GetRenewalInfo returns the renewal information (if present and supported by the ACME server), and
 // a Retry-After time if indicated in the http response header.
-func (c Client) GetRenewalInfo(cert, issuer *x509.Certificate, hash crypto.Hash) (RenewalInfo, time.Time, error) {
+func (c Client) GetRenewalInfo(cert, issuer *x509.Certificate, hash crypto.Hash) (RenewalInfo, error) {
 
 	if len(c.dir.RenewalInfo) == 0 {
-		return RenewalInfo{}, time.Time{}, ErrRenewalInfoNotSupported
+		return RenewalInfo{}, ErrRenewalInfoNotSupported
 	}
 
 	certID, err := generateCertID(cert, issuer, hash)
 	if err != nil {
-		return RenewalInfo{}, time.Time{}, fmt.Errorf("error generating certificate id: %v", err)
+		return RenewalInfo{}, fmt.Errorf("error generating certificate id: %v", err)
 	}
 
 	renewalURL := c.dir.RenewalInfo
@@ -73,23 +75,11 @@ func (c Client) GetRenewalInfo(cert, issuer *x509.Certificate, hash crypto.Hash)
 
 	resp, err := c.get(renewalURL, &ri, http.StatusOK)
 	if err != nil {
-		return ri, time.Time{}, err
+		return ri, err
 	}
 
-	retryAfterString := strings.TrimSpace(resp.Header.Get("Retry-After"))
-	if len(retryAfterString) == 0 {
-		return ri, time.Time{}, nil
-	}
-
-	if retryAfterTime, err := time.Parse(time.RFC1123, retryAfterString); err == nil {
-		return ri, retryAfterTime, nil
-	}
-
-	if retryAfterInt, err := strconv.Atoi(retryAfterString); err == nil {
-		return ri, time.Now().Add(time.Second * time.Duration(retryAfterInt)), nil
-	}
-
-	return ri, time.Time{}, fmt.Errorf("error parsing Retry-After: unsupported time: %s", retryAfterString)
+	ri.RetryAfter, err = parseRetryAfter(resp.Header.Get("Retry-After"))
+	return ri, err
 }
 
 // UpdateRenewalInfo sends a request to the acme server to indicate the renewal info is updated.
@@ -150,17 +140,14 @@ func generateCertID(cert, issuer *x509.Certificate, hashFunc crypto.Hash) (strin
 	issuerKeyHash := h.Sum(nil)
 
 	s := struct {
-		HashAlgorithm struct {
-			AlgorithmIdentifier asn1.ObjectIdentifier
-		}
-		IssuerNameHash []uint8
-		IssuerKeyHash  []uint8
+		HashAlgorithm  pkix.AlgorithmIdentifier
+		IssuerNameHash []byte
+		IssuerKeyHash  []byte
 		SerialNumber   *big.Int
 	}{
-		HashAlgorithm: struct {
-			AlgorithmIdentifier asn1.ObjectIdentifier
-		}{
-			AlgorithmIdentifier: oid,
+		HashAlgorithm: pkix.AlgorithmIdentifier{
+			Algorithm: oid,
+			// Parameters: asn1.RawValue{Tag: 5 /* ASN.1 NULL */},
 		},
 		IssuerNameHash: issuerNameHash,
 		IssuerKeyHash:  issuerKeyHash,
@@ -168,4 +155,34 @@ func generateCertID(cert, issuer *x509.Certificate, hashFunc crypto.Hash) (strin
 	}
 	b, err := asn1.Marshal(s)
 	return strings.TrimRight(base64.URLEncoding.EncodeToString(b), "="), err
+}
+
+// timeNow and implementations support testing
+type timeNow interface {
+	Now() time.Time
+}
+
+type currentTimeNow struct{}
+
+func (currentTimeNow) Now() time.Time {
+	return time.Now()
+}
+
+var systemTime timeNow = currentTimeNow{}
+
+func parseRetryAfter(ra string) (time.Time, error) {
+	retryAfterString := strings.TrimSpace(ra)
+	if len(retryAfterString) == 0 {
+		return time.Time{}, nil
+	}
+
+	if retryAfterTime, err := time.Parse(time.RFC1123, retryAfterString); err == nil {
+		return retryAfterTime, nil
+	}
+
+	if retryAfterInt, err := strconv.Atoi(retryAfterString); err == nil {
+		return systemTime.Now().Add(time.Second * time.Duration(retryAfterInt)), nil
+	}
+
+	return time.Time{}, fmt.Errorf("invalid time format: %s", retryAfterString)
 }

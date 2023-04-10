@@ -108,29 +108,53 @@ func (c Client) FinalizeOrder(account Account, order Order, csr *x509.Certificat
 	}
 
 	order.URL = resp.Header.Get("Location")
+	retryAfter, err := parseRetryAfter(resp.Header.Get("Retry-After"))
+	if err != nil {
+		return order, fmt.Errorf("acme: error parsing retry-after header: %v", err)
+	}
+	order.RetryAfter = retryAfter
 
 	if finished, err := checkFinalizedOrderStatus(order); finished {
 		return order, err
 	}
 
-	pollInterval, pollTimeout := c.getPollingDurations()
-	end := time.Now().Add(pollTimeout)
-	for {
-		if time.Now().After(end) {
-			return order, errors.New("acme: finalized order timeout")
-		}
-		time.Sleep(pollInterval)
-
-		if _, err := c.post(order.URL, account.URL, account.PrivateKey, "", &order, http.StatusOK); err != nil {
-			// i dont think it's worth exiting the loop on this error
-			// it could just be connectivity issue thats resolved before the timeout duration
-			continue
-		}
-
-		order.URL = resp.Header.Get("Location")
-
-		if finished, err := checkFinalizedOrderStatus(order); finished {
+	if !c.IgnoreRetryAfter {
+		if retryAfter.IsZero() || retryAfter.Before(time.Now()) {
+			_, err := c.post(order.URL, account.URL, account.PrivateKey, "", &order, http.StatusOK)
 			return order, err
 		}
+		diff := time.Until(retryAfter)
+		_, pollTimeout := c.getPollingDurations()
+		if diff > pollTimeout {
+			return order, fmt.Errorf("acme: Retry-After (%v) longer than poll timeout (%v)", diff, c.PollTimeout)
+		}
+		time.Sleep(diff)
+		_, err := c.post(order.URL, account.URL, account.PrivateKey, "", &order, http.StatusOK)
+		return order, err
 	}
+
+	if !c.IgnoreRetryAfter {
+		pollInterval, pollTimeout := c.getPollingDurations()
+		end := time.Now().Add(pollTimeout)
+		for {
+			if time.Now().After(end) {
+				return order, errors.New("acme: finalized order timeout")
+			}
+			time.Sleep(pollInterval)
+
+			if _, err := c.post(order.URL, account.URL, account.PrivateKey, "", &order, http.StatusOK); err != nil {
+				// i dont think it's worth exiting the loop on this error
+				// it could just be connectivity issue thats resolved before the timeout duration
+				continue
+			}
+
+			order.URL = resp.Header.Get("Location")
+
+			if finished, err := checkFinalizedOrderStatus(order); finished {
+				return order, err
+			}
+		}
+	}
+
+	return order, err
 }

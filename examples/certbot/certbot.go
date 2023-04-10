@@ -1,3 +1,4 @@
+//go:build ignore
 // +build ignore
 
 package main
@@ -9,20 +10,17 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/json"
+	"encoding/pem"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 	"path/filepath"
 	"strings"
-
-	"crypto/x509"
-	"crypto/x509/pkix"
-
-	"encoding/pem"
-
-	"flag"
-	"os"
 
 	"github.com/eggsampler/acme/v3"
 )

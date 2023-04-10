@@ -4,6 +4,7 @@ import (
 	"crypto"
 	"crypto/x509"
 	"encoding/pem"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -25,11 +26,11 @@ func TestClient_GetRenewalInfo(t *testing.T) {
 	if len(certs) < 2 {
 		t.Fatalf("no certs")
 	}
-	renewalInfo, retryAfter, err := testClient.GetRenewalInfo(certs[0], certs[1], crypto.SHA256)
+	renewalInfo, err := testClient.GetRenewalInfo(certs[0], certs[1], crypto.SHA256)
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
-	if retryAfter.IsZero() {
+	if renewalInfo.RetryAfter.IsZero() {
 		t.Fatalf("no retry after provided")
 	}
 	if renewalInfo.SuggestedWindow.Start.Before(time.Now()) {
@@ -151,4 +152,72 @@ func pem2cert(t *testing.T, s string) *x509.Certificate {
 		t.Fatalf("error parsing certificate: %v", err)
 	}
 	return cert
+}
+
+type zeroTimeNow struct{}
+
+func (zeroTimeNow) Now() time.Time {
+	return time.Time{}
+}
+
+func Test_parseRetryAfter(t *testing.T) {
+	systemTime = zeroTimeNow{}
+
+	currentTime := time.Now().Round(time.Second)
+	currentTimeRFC1123 := currentTime.Format(time.RFC1123)
+
+	type args struct {
+		ra string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    time.Time
+		wantErr bool
+	}{
+		{
+			name: "simple",
+			args: args{
+				ra: "123",
+			},
+			want:    time.Time{}.Add(123 * time.Second),
+			wantErr: false,
+		},
+		{
+			name: "date",
+			args: args{
+				ra: "Wed, 21 Oct 2015 07:28:00 GMT",
+			},
+			want:    time.Date(2015, 10, 21, 7, 28, 0, 0, time.FixedZone("GMT", 0)),
+			wantErr: false,
+		},
+		{
+			name: "bad",
+			args: args{
+				ra: "hello, world",
+			},
+			want:    time.Time{},
+			wantErr: true,
+		},
+		{
+			name: "dynamic",
+			args: args{
+				ra: currentTimeRFC1123,
+			},
+			want:    currentTime,
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := parseRetryAfter(tt.args.ra)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("parseRetryAfter() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("parseRetryAfter() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

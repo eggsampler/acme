@@ -1,3 +1,4 @@
+//go:build ignore
 // +build ignore
 
 package main
@@ -11,11 +12,9 @@ package main
 // - openssl s_client -connect localhost:443 -servername [NGROK FORWARDING HOSTNAME]
 
 import (
-	"net/http"
-
 	"crypto/tls"
-
 	"log"
+	"net/http"
 
 	"github.com/eggsampler/acme/v3"
 )
