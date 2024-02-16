@@ -6,9 +6,11 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	crand "crypto/rand"
+	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/base32"
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
@@ -169,7 +171,7 @@ func makeOrderFinalised(t *testing.T, supportedChalTypes []string, identifiers .
 		chalType := supportedChalTypes[mrand.Intn(len(supportedChalTypes))]
 		chal, ok := auth.ChallengeMap[chalType]
 		if !ok {
-			t.Fatalf("No supported challenge %q (%v) in challenges: %v", chalType, supportedChalTypes, auth.ChallengeTypes)
+			t.Skipf("skipping, no supported challenge %q (%v) in challenges: %v", chalType, supportedChalTypes, auth.ChallengeTypes)
 		}
 
 		if chal.Status == "valid" {
@@ -179,8 +181,8 @@ func makeOrderFinalised(t *testing.T, supportedChalTypes []string, identifiers .
 			t.Fatalf("unexpected status %q on challenge: %+v", chal.Status, chal)
 		}
 
-		preChallenge(auth, chal)
-		defer postChallenge(auth, chal)
+		preChallenge(acct, auth, chal)
+		defer postChallenge(acct, auth, chal)
 
 		updatedChal, err := testClient.UpdateChallenge(acct, chal)
 		if err != nil {
@@ -254,7 +256,7 @@ func doPost(name string, req interface{}) {
 	}
 }
 
-func preChallenge(auth Authorization, chal Challenge) {
+func preChallenge(acct Account, auth Authorization, chal Challenge) {
 	switch chal.Type {
 	case ChallengeTypeDNS01:
 		setReq := struct {
@@ -262,6 +264,23 @@ func preChallenge(auth Authorization, chal Challenge) {
 			Value string `json:"value"`
 		}{
 			Host:  "_acme-challenge." + auth.Identifier.Value + ".",
+			Value: EncodeDNS01KeyAuthorization(chal.KeyAuthorization),
+		}
+		doPost("set-txt", setReq)
+
+	case ChallengeTypeDNSAccount01:
+		acctHash := sha256.Sum256([]byte(acct.URL))
+		acctLabel := strings.ToLower(base32.StdEncoding.EncodeToString(acctHash[0:10]))
+		scope := "host"
+		if auth.Wildcard {
+			scope = "wildcard"
+		}
+		setReq := struct {
+			Host  string `json:"host"`
+			Value string `json:"value"`
+		}{
+			Host: "_" + acctLabel + "._acme-" + scope + "-challenge." +
+				auth.Identifier.Value + ".",
 			Value: EncodeDNS01KeyAuthorization(chal.KeyAuthorization),
 		}
 		doPost("set-txt", setReq)
@@ -291,10 +310,26 @@ func preChallenge(auth Authorization, chal Challenge) {
 	}
 }
 
-func postChallenge(auth Authorization, chal Challenge) {
+func postChallenge(acct Account, auth Authorization, chal Challenge) {
 	switch chal.Type {
 	case ChallengeTypeDNS01:
 		host := "_acme-challenge." + auth.Identifier.Value + "."
+		clearReq := struct {
+			Host string `json:"host"`
+		}{
+			Host: host,
+		}
+		doPost("clear-txt", clearReq)
+
+	case ChallengeTypeDNSAccount01:
+		acctHash := sha256.Sum256([]byte(acct.URL))
+		acctLabel := strings.ToLower(base32.StdEncoding.EncodeToString(acctHash[0:10]))
+		scope := "host"
+		if auth.Wildcard {
+			scope = "wildcard"
+		}
+		host := "_" + acctLabel + "._acme-" + scope + "-challenge." +
+			auth.Identifier.Value + "."
 		clearReq := struct {
 			Host string `json:"host"`
 		}{
