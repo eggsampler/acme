@@ -1,17 +1,14 @@
 package acme
 
 import (
-	"crypto"
 	_ "crypto/sha1"
 	_ "crypto/sha256"
 	_ "crypto/sha512"
 	"crypto/x509"
-	"crypto/x509/pkix"
 	"encoding/asn1"
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"math/big"
 	"net/http"
 	"strconv"
 	"strings"
@@ -35,33 +32,17 @@ var (
 	// ErrRenewalInfoNotSupported is returned by Client.GetRenewalInfo and Client.UpdateRenewalInfo if the renewal info
 	// entry isn't present on the acme directory (ie, it's not supported by the acme server)
 	ErrRenewalInfoNotSupported = errors.New("renewal information endpoint not")
-
-	// from https://cs.opensource.google/go/x/crypto/+/refs/tags/v0.8.0:ocsp/ocsp.go;l=156
-	hashOIDs = map[crypto.Hash]asn1.ObjectIdentifier{
-		crypto.SHA1:   asn1.ObjectIdentifier([]int{1, 3, 14, 3, 2, 26}),
-		crypto.SHA256: asn1.ObjectIdentifier([]int{2, 16, 840, 1, 101, 3, 4, 2, 1}),
-		crypto.SHA384: asn1.ObjectIdentifier([]int{2, 16, 840, 1, 101, 3, 4, 2, 2}),
-		crypto.SHA512: asn1.ObjectIdentifier([]int{2, 16, 840, 1, 101, 3, 4, 2, 3}),
-	}
-
-	// hashNames exists because go 1.11 doesn't have crypto.Hash.String()
-	hashNames = map[crypto.Hash]string{
-		crypto.SHA1:   "SHA1",
-		crypto.SHA256: "SHA256",
-		crypto.SHA384: "SHA384",
-		crypto.SHA512: "SHA512",
-	}
 )
 
 // GetRenewalInfo returns the renewal information (if present and supported by the ACME server), and
 // a Retry-After time if indicated in the http response header.
-func (c Client) GetRenewalInfo(cert, issuer *x509.Certificate, hash crypto.Hash) (RenewalInfo, error) {
+func (c Client) GetRenewalInfo(cert *x509.Certificate) (RenewalInfo, error) {
 
-	if len(c.dir.RenewalInfo) == 0 {
+	if c.dir.RenewalInfo == "" {
 		return RenewalInfo{}, ErrRenewalInfoNotSupported
 	}
 
-	certID, err := generateCertID(cert, issuer, hash)
+	certID, err := generateARICertID(cert)
 	if err != nil {
 		return RenewalInfo{}, fmt.Errorf("error generating certificate id: %v", err)
 	}
@@ -84,13 +65,13 @@ func (c Client) GetRenewalInfo(cert, issuer *x509.Certificate, hash crypto.Hash)
 
 // UpdateRenewalInfo sends a request to the acme server to indicate the renewal info is updated.
 // replaced should always be true.
-func (c Client) UpdateRenewalInfo(account Account, cert, issuer *x509.Certificate, hash crypto.Hash, replaced bool) error {
+func (c Client) UpdateRenewalInfo(account Account, cert *x509.Certificate, replaced bool) error {
 
 	if len(c.dir.RenewalInfo) == 0 {
 		return ErrRenewalInfoNotSupported
 	}
 
-	certID, err := generateCertID(cert, issuer, hash)
+	certID, err := generateARICertID(cert)
 	if err != nil {
 		return fmt.Errorf("error generating certificate id: %v", err)
 	}
@@ -108,53 +89,32 @@ func (c Client) UpdateRenewalInfo(account Account, cert, issuer *x509.Certificat
 	return err
 }
 
-// generateCertID creates a CertID as per RFC6960
-func generateCertID(cert, issuer *x509.Certificate, hashFunc crypto.Hash) (string, error) {
-	oid, ok := hashOIDs[hashFunc]
-	if !ok {
-		var s []string
-		for k := range hashOIDs {
-			s = append(s, hashNames[k])
-		}
-		return "", fmt.Errorf("unsupported hash algorithm %q, currently available: %q", hashNames[hashFunc], strings.Join(s, ","))
+// generateARICertID
+func generateARICertID(cert *x509.Certificate) (string, error) {
+	if cert == nil {
+		return "", fmt.Errorf("certificate not found")
 	}
 
-	if !hashFunc.Available() {
-		return "", x509.ErrUnsupportedAlgorithm
+	derBytes, err := asn1.Marshal(cert.SerialNumber)
+	if err != nil {
+		return "", nil
 	}
 
-	var publicKeyInfo struct {
-		Algorithm pkix.AlgorithmIdentifier
-		PublicKey asn1.BitString
-	}
-	if _, err := asn1.Unmarshal(issuer.RawSubjectPublicKeyInfo, &publicKeyInfo); err != nil {
-		return "", err
+	if len(derBytes) < 3 {
+		return "", fmt.Errorf("invalid DER encoding of serial number")
 	}
 
-	h := hashFunc.New()
-	h.Write(issuer.RawSubject)
-	issuerNameHash := h.Sum(nil)
+	// Extract only the integer bytes from the DER encoded Serial Number
+	// Skipping the first 2 bytes (tag and length). The result is base64url
+	// encoded without padding.
+	serial := base64.RawURLEncoding.EncodeToString(derBytes[2:])
 
-	h.Reset()
-	h.Write(publicKeyInfo.PublicKey.RightAlign())
-	issuerKeyHash := h.Sum(nil)
+	// Convert the Authority Key Identifier to base64url encoding without
+	// padding.
+	aki := base64.RawURLEncoding.EncodeToString(cert.AuthorityKeyId)
 
-	s := struct {
-		HashAlgorithm  pkix.AlgorithmIdentifier
-		IssuerNameHash []byte
-		IssuerKeyHash  []byte
-		SerialNumber   *big.Int
-	}{
-		HashAlgorithm: pkix.AlgorithmIdentifier{
-			Algorithm: oid,
-			// Parameters: asn1.RawValue{Tag: 5 /* ASN.1 NULL */},
-		},
-		IssuerNameHash: issuerNameHash,
-		IssuerKeyHash:  issuerKeyHash,
-		SerialNumber:   cert.SerialNumber,
-	}
-	b, err := asn1.Marshal(s)
-	return strings.TrimRight(base64.URLEncoding.EncodeToString(b), "="), err
+	// Construct the final identifier by concatenating AKI and Serial Number.
+	return fmt.Sprintf("%s.%s", aki, serial), nil
 }
 
 // timeNow and implementations support testing
