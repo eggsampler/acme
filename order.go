@@ -9,29 +9,92 @@ import (
 	"time"
 )
 
-// NewOrder initiates a new order for a new certificate.
+// NewOrder initiates a new order for a new certificate. This method does not
+// use ACME Renewal Info.
 func (c Client) NewOrder(account Account, identifiers []Identifier) (Order, error) {
-	newOrderReq := struct {
-		Identifiers []Identifier `json:"identifiers"`
-	}{
-		Identifiers: identifiers,
-	}
 	newOrderResp := Order{}
-	resp, err := c.post(c.dir.NewOrder, account.URL, account.PrivateKey, newOrderReq, &newOrderResp, http.StatusCreated)
+	err := newOrderResp.postNewOrder(c, account, identifiers, false, "")
 	if err != nil {
 		return newOrderResp, err
 	}
 
-	newOrderResp.URL = resp.Header.Get("Location")
+	return newOrderResp, nil
+}
+
+// NewOrderDomains is a wrapper for NewOrder(AcmeAccount, []AcmeIdentifiers). It
+// creates a dns identifier for each provided domain. This method does not use
+// ACME Renewal Info.
+func (c Client) NewOrderDomains(account Account, domains ...string) (Order, error) {
+	ids, err := domainsToIds(domains)
+	if err != nil {
+		return Order{}, err
+	}
+
+	return c.NewOrder(account, ids)
+}
+
+// NewOrderRenewal takes an existing *x509.Certificate and initiates a new order
+// for a new certificate, but with the order being marked as a replacement.
+// Replacement orders are exempt from Let's Encrypt NewOrder rate limits. It
+// creates a dns identifier for each provided domain. At least one identifier
+// must match the list of identifiers from the parent order to be considered as
+// a valid replacment order.
+// See https://datatracker.ietf.org/doc/html/draft-ietf-acme-ari-03#section-5
+func (c Client) NewOrderRenewal(account Account, oldCert *x509.Certificate, domains ...string) (Order, error) {
+	if c.dir.RenewalInfo == "" {
+		return Order{}, ErrRenewalInfoNotSupported
+	}
+
+	certID, err := generateARICertID(oldCert)
+	if err != nil {
+		return Order{}, fmt.Errorf("acme: error generating certificate id: %v", err)
+	}
+
+	ids, err := domainsToIds(domains)
+	if err != nil {
+		return Order{}, err
+	}
+
+	newOrderResp := Order{}
+	err = newOrderResp.postNewOrder(c, account, ids, true, certID)
+	if err != nil {
+		return newOrderResp, err
+	}
 
 	return newOrderResp, nil
 }
 
-// NewOrderDomains is a wrapper for NewOrder(AcmeAccount, []AcmeIdentifiers)
-// Creates a dns identifier for each provided domain
-func (c Client) NewOrderDomains(account Account, domains ...string) (Order, error) {
+// postNewOrder handles the logic of POSTing either 1) an ACME Renewal Info (ARI)
+// replacement order or 2) a standard order to the ACME server and returns an
+// error. The order object is mutated in place.
+func (order *Order) postNewOrder(c Client, account Account, ids []Identifier, isReplacement bool, certID string) error {
+	// Determine if this is an ARI request
+	if isReplacement && certID != "" {
+		order.Replaces = certID
+	} else if isReplacement {
+		return errors.New("acme: constructing NewOrder ACME Renewal Info replacement with no certID")
+	}
+
+	newOrderReq := struct {
+		Identifiers []Identifier `json:"identifiers"`
+	}{
+		Identifiers: ids,
+	}
+
+	resp, err := c.post(c.dir.NewOrder, account.URL, account.PrivateKey, newOrderReq, order, http.StatusCreated)
+	if err != nil {
+		return err
+	}
+	order.URL = resp.Header.Get("Location")
+
+	return nil
+}
+
+// domainsToIds takes a slice of strings representing domain names and returns a
+// slice of Identifiers or an error.
+func domainsToIds(domains []string) ([]Identifier, error) {
 	if len(domains) == 0 {
-		return Order{}, errors.New("acme: no domains provided")
+		return nil, errors.New("acme: no domains provided")
 	}
 
 	var ids []Identifier
@@ -39,7 +102,7 @@ func (c Client) NewOrderDomains(account Account, domains ...string) (Order, erro
 		ids = append(ids, Identifier{Type: "dns", Value: d})
 	}
 
-	return c.NewOrder(account, ids)
+	return ids, nil
 }
 
 // FetchOrder fetches an existing order given an order url.

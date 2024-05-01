@@ -6,6 +6,51 @@ import (
 	"testing"
 )
 
+func TestDomainsToIds(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name                string
+		domains             []string
+		expectedIdentifiers []Identifier
+		expectedFailure     bool
+	}{
+		{
+			name:            "No domains",
+			domains:         nil,
+			expectedFailure: true,
+		},
+		{
+			name:                "One domain",
+			domains:             []string{"example.com"},
+			expectedIdentifiers: []Identifier{{"dns", "example.com"}},
+		},
+		{
+			name:                "Multiple domains",
+			domains:             []string{"example.org", "example.net"},
+			expectedIdentifiers: []Identifier{{"dns", "example.org"}, {"dns", "example.net"}},
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			ids, err := domainsToIds(tc.domains)
+			if !tc.expectedFailure {
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+			if len(ids) != len(tc.expectedIdentifiers) {
+				t.Fatalf("unexpected amount of IDs: %d != %d", len(ids), len(tc.expectedIdentifiers))
+			}
+			if !reflect.DeepEqual(ids, tc.expectedIdentifiers) {
+				t.Fatalf("unexpected error: %v != %v", ids, tc.expectedIdentifiers)
+			}
+		})
+	}
+}
+
 func TestClient_NewOrder(t *testing.T) {
 	key := makePrivateKey(t)
 	account, err := testClient.NewAccount(key, false, true)

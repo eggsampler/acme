@@ -42,30 +42,6 @@ func TestClient_GetRenewalInfo(t *testing.T) {
 	}
 }
 
-func TestClient_UpdateRenewalInfo(t *testing.T) {
-	if testClientMeta.Software == clientPebble {
-		t.Skip("pebble doesnt support ari")
-		return
-	}
-
-	account, order, _ := makeOrderFinalised(t, nil)
-	if order.Certificate == "" {
-		t.Fatalf("no certificate: %+v", order)
-	}
-	certs, err := testClient.FetchCertificates(account, order.Certificate)
-	if err != nil {
-		t.Fatalf("expeceted no error, got: %v", err)
-	}
-	if len(certs) < 2 {
-		t.Fatalf("no certs")
-	}
-	if err := testClient.UpdateRenewalInfo(account, certs[0], true); err != nil {
-		t.Fatalf("expected no error, got: %v", err)
-	}
-	// TODO: update this test once there's any feedback or change in the renewal info provided by boulder?
-	// as of 2023-04-09, it appears to be the same before updating, and after updating
-}
-
 func Test_generateCertID(t *testing.T) {
 	type args struct {
 		cert *x509.Certificate

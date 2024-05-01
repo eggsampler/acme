@@ -9,42 +9,51 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 )
 
-type (
-	// RenewalInfo is returned by Client.GetRenewalInfo
-	RenewalInfo struct {
-		SuggestedWindow struct {
-			Start time.Time `json:"start"`
-			End   time.Time `json:"end"`
-		} `json:"suggestedWindow"`
-		ExplanationURL string `json:"explanationURL"`
+// RenewalInfo stores the server-provided suggestions on when to renew
+// certificates.
+type RenewalInfo struct {
+	SuggestedWindow struct {
+		Start time.Time `json:"start"`
+		End   time.Time `json:"end"`
+	} `json:"suggestedWindow"`
+	ExplanationURL string `json:"explanationURL"`
 
-		RetryAfter time.Time `json:"-"`
+	RetryAfter time.Time `json:"-"`
+}
+
+// ErrRenewalInfoNotSupported is returned by Client.GetRenewalInfo if the
+// renewal info entry isn't present on the acme directory (ie, it's not
+// supported by the acme server)
+var ErrRenewalInfoNotSupported = errors.New("renewal information endpoint not")
+
+/*
+func (c Client) HasARISupport(certID string) (*http.Response, error) {
+	if c.dir.RenewalInfo == "" {
+		return nil, ErrRenewalInfoNotSupported
 	}
-)
 
-var (
-	// ErrRenewalInfoNotSupported is returned by Client.GetRenewalInfo and Client.UpdateRenewalInfo if the renewal info
-	// entry isn't present on the acme directory (ie, it's not supported by the acme server)
-	ErrRenewalInfoNotSupported = errors.New("renewal information endpoint not")
-)
+	return
+}
 
-// GetRenewalInfo returns the renewal information (if present and supported by the ACME server), and
-// a Retry-After time if indicated in the http response header.
+*/
+// GetRenewalInfo returns the renewal information (if present and supported by
+// the ACME server), and a Retry-After time if indicated in the http response
+// header.
 func (c Client) GetRenewalInfo(cert *x509.Certificate) (RenewalInfo, error) {
-
 	if c.dir.RenewalInfo == "" {
 		return RenewalInfo{}, ErrRenewalInfoNotSupported
 	}
 
 	certID, err := generateARICertID(cert)
 	if err != nil {
-		return RenewalInfo{}, fmt.Errorf("error generating certificate id: %v", err)
+		return RenewalInfo{}, fmt.Errorf("acme: error generating certificate id: %v", err)
 	}
 
 	renewalURL := c.dir.RenewalInfo
@@ -61,32 +70,6 @@ func (c Client) GetRenewalInfo(cert *x509.Certificate) (RenewalInfo, error) {
 
 	ri.RetryAfter, err = parseRetryAfter(resp.Header.Get("Retry-After"))
 	return ri, err
-}
-
-// UpdateRenewalInfo sends a request to the acme server to indicate the renewal info is updated.
-// replaced should always be true.
-func (c Client) UpdateRenewalInfo(account Account, cert *x509.Certificate, replaced bool) error {
-
-	if len(c.dir.RenewalInfo) == 0 {
-		return ErrRenewalInfoNotSupported
-	}
-
-	certID, err := generateARICertID(cert)
-	if err != nil {
-		return fmt.Errorf("error generating certificate id: %v", err)
-	}
-
-	updateReq := struct {
-		CertID   string `json:"certID"`
-		Replaced bool   `json:"replaced"`
-	}{
-		CertID:   certID,
-		Replaced: replaced,
-	}
-
-	_, err = c.post(c.dir.RenewalInfo, account.URL, account.PrivateKey, updateReq, nil, http.StatusOK)
-
-	return err
 }
 
 // generateARICertID
@@ -115,6 +98,32 @@ func generateARICertID(cert *x509.Certificate) (string, error) {
 
 	// Construct the final identifier by concatenating AKI and Serial Number.
 	return fmt.Sprintf("%s.%s", aki, serial), nil
+}
+
+func (r RenewalInfo) ShouldRenewAt(now time.Time, willingToSleep time.Duration) *time.Time {
+	// Explicitly convert all times to UTC.
+	now = now.UTC()
+	start := r.SuggestedWindow.Start.UTC()
+	end := r.SuggestedWindow.End.UTC()
+
+	// Select a uniform random time within the suggested window.
+	window := end.Sub(start)
+	randomDuration := time.Duration(rand.Int63n(int64(window)))
+	randomTime := start.Add(randomDuration)
+
+	// If the selected time is in the past, attempt renewal immediately.
+	if randomTime.Before(now) {
+		return &now
+	}
+
+	// Otherwise, if the client can schedule itself to attempt renewal at
+	// exactly the selected time, do so.
+	willingToSleepUntil := now.Add(willingToSleep)
+	if willingToSleepUntil.After(randomTime) || willingToSleepUntil.Equal(randomTime) {
+		return &randomTime
+	}
+
+	return nil
 }
 
 // timeNow and implementations support testing

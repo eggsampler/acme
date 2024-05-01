@@ -15,7 +15,6 @@
 package main
 
 import (
-	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -116,14 +115,17 @@ func main() {
 	cert, err := client.FetchCertificates(account, order.Certificate)
 	ifpanic(err)
 
-	ri, err := client.GetRenewalInfo(cert[0], cert[1], crypto.SHA256)
+	ri, err := client.GetRenewalInfo(cert[0])
 	ifpanic(err)
+
+	shouldRenewAt := ri.ShouldRenewAt(time.Now(), time.Duration(1*time.Second))
 
 	fmt.Println("Renewal info:")
 	fmt.Printf(" - Start: %s\n", ri.SuggestedWindow.Start)
 	fmt.Printf(" - End: %s\n", ri.SuggestedWindow.End)
 	fmt.Printf(" - URL: %s\n", ri.ExplanationURL)
 	fmt.Printf(" - Retry-After: %s\n", ri.RetryAfter)
+	fmt.Printf(" - Renew-At: %s\n", shouldRenewAt)
 }
 
 func ifpanic(err error) {
