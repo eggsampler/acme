@@ -33,16 +33,6 @@ type RenewalInfo struct {
 // supported by the acme server)
 var ErrRenewalInfoNotSupported = errors.New("renewal information endpoint not")
 
-/*
-func (c Client) HasARISupport(certID string) (*http.Response, error) {
-	if c.dir.RenewalInfo == "" {
-		return nil, ErrRenewalInfoNotSupported
-	}
-
-	return
-}
-
-*/
 // GetRenewalInfo returns the renewal information (if present and supported by
 // the ACME server), and a Retry-After time if indicated in the http response
 // header.
