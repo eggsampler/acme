@@ -108,6 +108,14 @@ func TestClient_NewOrderDomains(t *testing.T) {
 	}
 }
 
+func TestClient_NewOrderReplacement(t *testing.T) {
+	account := makeAccount(t)
+	_, err := testClient.NewOrderRenewal(account, nil)
+	if err == nil {
+		t.Fatalf("expected error, got none")
+	}
+}
+
 func Test_checkFinalizedOrderStatus(t *testing.T) {
 	tests := []struct {
 		Order       *Order

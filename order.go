@@ -12,7 +12,7 @@ import (
 // NewOrder initiates a new order for a new certificate. This method does not
 // use ACME Renewal Info.
 func (c Client) NewOrder(account Account, identifiers []Identifier) (*Order, error) {
-	newOrderResp, err := c.postNewOrder(account, identifiers, false, "")
+	newOrderResp, err := c.postNewOrder(account, identifiers, nil)
 	if err != nil {
 		return newOrderResp, err
 	}
@@ -30,6 +30,10 @@ func (c Client) NewOrderDomains(account Account, domains ...string) (*Order, err
 	}
 
 	return c.NewOrder(account, ids)
+}
+
+type ariRequest struct {
+	certID string
 }
 
 // NewOrderRenewal takes an existing *x509.Certificate and initiates a new order
@@ -58,7 +62,8 @@ func (c Client) NewOrderRenewal(account Account, oldCert *x509.Certificate, doma
 		return nil, err
 	}
 
-	newOrderResp, err := c.postNewOrder(account, ids, true, certID)
+	ari := &ariRequest{certID: certID}
+	newOrderResp, err := c.postNewOrder(account, ids, ari)
 	if err != nil {
 		return nil, err
 	}
@@ -69,24 +74,22 @@ func (c Client) NewOrderRenewal(account Account, oldCert *x509.Certificate, doma
 // postNewOrder handles the logic of POSTing either 1) an ACME Renewal Info (ARI)
 // replacement order or 2) a standard RFC 8555 order to the ACME server and returns an
 // error.
-func (c Client) postNewOrder(account Account, ids []Identifier, isReplacement bool, certID string) (*Order, error) {
+func (c Client) postNewOrder(account Account, ids []Identifier, ari *ariRequest) (*Order, error) {
 	type newOrderRequest interface{}
 	var newOrderReq newOrderRequest
 
 	// This order object will be returned to the client.
 	order := Order{}
-	if isReplacement && certID != "" {
-		order.Replaces = certID
+	if ari != nil {
+		order.Replaces = ari.certID
 		ariNewOrderReq := struct {
 			Identifiers []Identifier `json:"identifiers"`
 			Replaces    string
 		}{
 			Identifiers: ids,
-			Replaces:    certID,
+			Replaces:    ari.certID,
 		}
 		newOrderReq = ariNewOrderReq
-	} else if isReplacement {
-		return nil, errors.New("acme: constructing NewOrder ACME Renewal Info replacement with no certID")
 	} else {
 		nonARINewOrderReq := struct {
 			Identifiers []Identifier `json:"identifiers"`
