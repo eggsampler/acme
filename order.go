@@ -11,9 +11,8 @@ import (
 
 // NewOrder initiates a new order for a new certificate. This method does not
 // use ACME Renewal Info.
-func (c Client) NewOrder(account Account, identifiers []Identifier) (Order, error) {
-	newOrderResp := Order{}
-	err := newOrderResp.postNewOrder(c, account, identifiers, false, "")
+func (c Client) NewOrder(account Account, identifiers []Identifier) (*Order, error) {
+	newOrderResp, err := c.postNewOrder(account, identifiers, false, "")
 	if err != nil {
 		return newOrderResp, err
 	}
@@ -24,10 +23,10 @@ func (c Client) NewOrder(account Account, identifiers []Identifier) (Order, erro
 // NewOrderDomains is a wrapper for NewOrder(AcmeAccount, []AcmeIdentifiers). It
 // creates a dns identifier for each provided domain. This method does not use
 // ACME Renewal Info.
-func (c Client) NewOrderDomains(account Account, domains ...string) (Order, error) {
+func (c Client) NewOrderDomains(account Account, domains ...string) (*Order, error) {
 	ids, err := domainsToIds(domains)
 	if err != nil {
-		return Order{}, err
+		return nil, err
 	}
 
 	return c.NewOrder(account, ids)
@@ -40,25 +39,28 @@ func (c Client) NewOrderDomains(account Account, domains ...string) (Order, erro
 // must match the list of identifiers from the parent order to be considered as
 // a valid replacment order.
 // See https://datatracker.ietf.org/doc/html/draft-ietf-acme-ari-03#section-5
-func (c Client) NewOrderRenewal(account Account, oldCert *x509.Certificate, domains ...string) (Order, error) {
+func (c Client) NewOrderRenewal(account Account, oldCert *x509.Certificate, domains ...string) (*Order, error) {
 	if c.dir.RenewalInfo == "" {
-		return Order{}, ErrRenewalInfoNotSupported
+		return nil, ErrRenewalInfoNotSupported
+	}
+
+	if oldCert == nil {
+		return nil, fmt.Errorf("certificate not found")
 	}
 
 	certID, err := generateARICertID(oldCert)
 	if err != nil {
-		return Order{}, fmt.Errorf("acme: error generating certificate id: %v", err)
+		return nil, fmt.Errorf("acme: error generating certificate id: %v", err)
 	}
 
 	ids, err := domainsToIds(domains)
 	if err != nil {
-		return Order{}, err
+		return nil, err
 	}
 
-	newOrderResp := Order{}
-	err = newOrderResp.postNewOrder(c, account, ids, true, certID)
+	newOrderResp, err := c.postNewOrder(account, ids, true, certID)
 	if err != nil {
-		return newOrderResp, err
+		return nil, err
 	}
 
 	return newOrderResp, nil
@@ -67,12 +69,13 @@ func (c Client) NewOrderRenewal(account Account, oldCert *x509.Certificate, doma
 // postNewOrder handles the logic of POSTing either 1) an ACME Renewal Info (ARI)
 // replacement order or 2) a standard order to the ACME server and returns an
 // error. The order object is mutated in place.
-func (order *Order) postNewOrder(c Client, account Account, ids []Identifier, isReplacement bool, certID string) error {
+func (c Client) postNewOrder(account Account, ids []Identifier, isReplacement bool, certID string) (*Order, error) {
+	order := Order{}
 	// Determine if this is an ARI request
 	if isReplacement && certID != "" {
 		order.Replaces = certID
 	} else if isReplacement {
-		return errors.New("acme: constructing NewOrder ACME Renewal Info replacement with no certID")
+		return nil, errors.New("acme: constructing NewOrder ACME Renewal Info replacement with no certID")
 	}
 
 	newOrderReq := struct {
@@ -81,13 +84,13 @@ func (order *Order) postNewOrder(c Client, account Account, ids []Identifier, is
 		Identifiers: ids,
 	}
 
-	resp, err := c.post(c.dir.NewOrder, account.URL, account.PrivateKey, newOrderReq, order, http.StatusCreated)
+	resp, err := c.post(c.dir.NewOrder, account.URL, account.PrivateKey, newOrderReq, &order, http.StatusCreated)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	order.URL = resp.Header.Get("Location")
 
-	return nil
+	return &order, nil
 }
 
 // domainsToIds takes a slice of strings representing domain names and returns a
@@ -106,8 +109,8 @@ func domainsToIds(domains []string) ([]Identifier, error) {
 }
 
 // FetchOrder fetches an existing order given an order url.
-func (c Client) FetchOrder(account Account, orderURL string) (Order, error) {
-	orderResp := Order{
+func (c Client) FetchOrder(account Account, orderURL string) (*Order, error) {
+	orderResp := &Order{
 		URL: orderURL, // boulder response doesn't seem to contain location header for this request
 	}
 	_, err := c.post(orderURL, account.URL, account.PrivateKey, "", &orderResp, http.StatusOK)
@@ -116,7 +119,11 @@ func (c Client) FetchOrder(account Account, orderURL string) (Order, error) {
 }
 
 // Helper function to determine whether an order is "finished" by it's status.
-func checkFinalizedOrderStatus(order Order) (bool, error) {
+func checkFinalizedOrderStatus(order *Order) (bool, error) {
+	if order == nil {
+		return false, errors.New("acme: nil order")
+	}
+
 	switch order.Status {
 	case "invalid":
 		// "invalid": The certificate will not be issued.  Consider this
@@ -158,7 +165,7 @@ func checkFinalizedOrderStatus(order Order) (bool, error) {
 // FinalizeOrder indicates to the acme server that the client considers an order complete and "finalizes" it.
 // If the server believes the authorizations have been filled successfully, a certificate should then be available.
 // This function assumes that the order status is "ready".
-func (c Client) FinalizeOrder(account Account, order Order, csr *x509.CertificateRequest) (Order, error) {
+func (c Client) FinalizeOrder(account Account, order *Order, csr *x509.CertificateRequest) (*Order, error) {
 	finaliseReq := struct {
 		Csr string `json:"csr"`
 	}{

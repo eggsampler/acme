@@ -110,50 +110,55 @@ func TestClient_NewOrderDomains(t *testing.T) {
 
 func Test_checkFinalizedOrderStatus(t *testing.T) {
 	tests := []struct {
-		Order       Order
+		Order       *Order
 		Finished    bool
 		HasError    bool
 		ErrorString string
 	}{
 		{
-			Order:       Order{Status: "invalid"},
+			Order:       &Order{Status: "invalid"},
 			Finished:    true,
 			HasError:    true,
 			ErrorString: "no error provided",
 		},
 		{
-			Order:       Order{Status: "invalid", Error: Problem{Type: "blahblahblah"}},
+			Order:       &Order{Status: "invalid", Error: Problem{Type: "blahblahblah"}},
 			Finished:    true,
 			HasError:    true,
 			ErrorString: "blahblahblah",
 		},
 		{
-			Order:       Order{Status: "pending"},
+			Order:       &Order{Status: "pending"},
 			Finished:    true,
 			HasError:    true,
 			ErrorString: "not fulfilled",
 		},
 		{
-			Order:       Order{Status: "ready"},
+			Order:       &Order{Status: "ready"},
 			Finished:    true,
 			HasError:    true,
 			ErrorString: "unexpected",
 		},
 		{
-			Order:    Order{Status: "processing"},
+			Order:    &Order{Status: "processing"},
 			Finished: false,
 			HasError: false,
 		},
 		{
-			Order:    Order{Status: "valid"},
+			Order:    &Order{Status: "valid"},
 			Finished: true,
 			HasError: false,
 		},
 		{
-			Order:       Order{Status: "asdfasdf"},
+			Order:       &Order{Status: "asdfasdf"},
 			Finished:    true,
 			HasError:    true,
 			ErrorString: "unknown order status",
+		},
+		{
+			Order:       nil,
+			HasError:    true,
+			ErrorString: "nil order",
 		},
 	}
 
