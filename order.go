@@ -67,23 +67,36 @@ func (c Client) NewOrderRenewal(account Account, oldCert *x509.Certificate, doma
 }
 
 // postNewOrder handles the logic of POSTing either 1) an ACME Renewal Info (ARI)
-// replacement order or 2) a standard order to the ACME server and returns an
-// error. The order object is mutated in place.
+// replacement order or 2) a standard RFC 8555 order to the ACME server and returns an
+// error.
 func (c Client) postNewOrder(account Account, ids []Identifier, isReplacement bool, certID string) (*Order, error) {
+	type newOrderRequest interface{}
+	var newOrderReq newOrderRequest
+
+	// This order object will be returned to the client.
 	order := Order{}
-	// Determine if this is an ARI request
 	if isReplacement && certID != "" {
 		order.Replaces = certID
+		ariNewOrderReq := struct {
+			Identifiers []Identifier `json:"identifiers"`
+			Replaces    string
+		}{
+			Identifiers: ids,
+			Replaces:    certID,
+		}
+		newOrderReq = ariNewOrderReq
 	} else if isReplacement {
 		return nil, errors.New("acme: constructing NewOrder ACME Renewal Info replacement with no certID")
+	} else {
+		nonARINewOrderReq := struct {
+			Identifiers []Identifier `json:"identifiers"`
+		}{
+			Identifiers: ids,
+		}
+		newOrderReq = nonARINewOrderReq
 	}
 
-	newOrderReq := struct {
-		Identifiers []Identifier `json:"identifiers"`
-	}{
-		Identifiers: ids,
-	}
-
+	// Submit the order
 	resp, err := c.post(c.dir.NewOrder, account.URL, account.PrivateKey, newOrderReq, &order, http.StatusCreated)
 	if err != nil {
 		return nil, err

@@ -62,7 +62,8 @@ func (c Client) GetRenewalInfo(cert *x509.Certificate) (RenewalInfo, error) {
 	return ri, err
 }
 
-// generateARICertID
+// generateARICertID constructs a certificate identifier as described in
+// draft-ietf-acme-ari-03, section 4.1.
 func generateARICertID(cert *x509.Certificate) (string, error) {
 	if cert == nil {
 		return "", fmt.Errorf("certificate not found")
