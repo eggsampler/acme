@@ -72,13 +72,13 @@ yNQwCgYIKoZIzj0EAwIDRwAwRAIge09+S5TZAlw5tgtiVvuERV6cT4mfutXIlwTb
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := generateARICertID(tt.args.cert)
+			got, err := GenerateARICertID(tt.args.cert)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("generateARICertID() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("GenerateARICertID() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if got != tt.want {
-				t.Errorf("generateARICertID() error\n got  = %v\n want = %v", got, tt.want)
+				t.Errorf("GenerateARICertID() error\n got  = %v\n want = %v", got, tt.want)
 			}
 		})
 	}
