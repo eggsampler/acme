@@ -71,7 +71,7 @@ func generateARICertID(cert *x509.Certificate) (string, error) {
 
 	derBytes, err := asn1.Marshal(cert.SerialNumber)
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 
 	if len(derBytes) < 3 {
