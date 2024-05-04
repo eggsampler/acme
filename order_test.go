@@ -1,55 +1,11 @@
 package acme
 
 import (
+	"crypto/x509"
 	"reflect"
 	"strings"
 	"testing"
 )
-
-func TestDomainsToIds(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name                string
-		domains             []string
-		expectedIdentifiers []Identifier
-		expectedFailure     bool
-	}{
-		{
-			name:            "No domains",
-			domains:         nil,
-			expectedFailure: true,
-		},
-		{
-			name:                "One domain",
-			domains:             []string{"example.com"},
-			expectedIdentifiers: []Identifier{{"dns", "example.com"}},
-		},
-		{
-			name:                "Multiple domains",
-			domains:             []string{"example.org", "example.net"},
-			expectedIdentifiers: []Identifier{{"dns", "example.org"}, {"dns", "example.net"}},
-		},
-	}
-
-	for _, tc := range tests {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			ids, err := domainsToIds(tc.domains)
-			if !tc.expectedFailure {
-				if err != nil {
-					t.Fatal(err)
-				}
-			}
-			if len(ids) != len(tc.expectedIdentifiers) {
-				t.Fatalf("unexpected amount of IDs: %d != %d", len(ids), len(tc.expectedIdentifiers))
-			}
-			if !reflect.DeepEqual(ids, tc.expectedIdentifiers) {
-				t.Fatalf("unexpected error: %v != %v", ids, tc.expectedIdentifiers)
-			}
-		})
-	}
-}
 
 func TestClient_NewOrder(t *testing.T) {
 	key := makePrivateKey(t)
@@ -100,73 +56,57 @@ func TestClient_FinalizeOrder(t *testing.T) {
 	makeOrderFinalised(t, nil)
 }
 
-func TestClient_NewOrderDomains(t *testing.T) {
-	account := makeAccount(t)
-	_, err := testClient.NewOrderDomains(account)
-	if err == nil {
-		t.Fatalf("expected error, got none")
-	}
-}
-
-func TestClient_NewOrderReplacement(t *testing.T) {
-	account := makeAccount(t)
-	_, err := testClient.NewOrderRenewal(account, nil)
-	if err == nil {
-		t.Fatalf("expected error, got none")
-	}
-}
-
 func Test_checkFinalizedOrderStatus(t *testing.T) {
 	tests := []struct {
-		Order       *Order
+		Order       Order
 		Finished    bool
 		HasError    bool
 		ErrorString string
 	}{
 		{
-			Order:       &Order{Status: "invalid"},
+			Order:       Order{Status: "invalid"},
 			Finished:    true,
 			HasError:    true,
 			ErrorString: "no error provided",
 		},
 		{
-			Order:       &Order{Status: "invalid", Error: Problem{Type: "blahblahblah"}},
+			Order:       Order{Status: "invalid", Error: Problem{Type: "blahblahblah"}},
 			Finished:    true,
 			HasError:    true,
 			ErrorString: "blahblahblah",
 		},
 		{
-			Order:       &Order{Status: "pending"},
+			Order:       Order{Status: "pending"},
 			Finished:    true,
 			HasError:    true,
 			ErrorString: "not fulfilled",
 		},
 		{
-			Order:       &Order{Status: "ready"},
+			Order:       Order{Status: "ready"},
 			Finished:    true,
 			HasError:    true,
 			ErrorString: "unexpected",
 		},
 		{
-			Order:    &Order{Status: "processing"},
+			Order:    Order{Status: "processing"},
 			Finished: false,
 			HasError: false,
 		},
 		{
-			Order:    &Order{Status: "valid"},
+			Order:    Order{Status: "valid"},
 			Finished: true,
 			HasError: false,
 		},
 		{
-			Order:       &Order{Status: "asdfasdf"},
+			Order:       Order{Status: "asdfasdf"},
 			Finished:    true,
 			HasError:    true,
 			ErrorString: "unknown order status",
 		},
 		{
-			Order:       nil,
+			Order:       Order{},
 			HasError:    true,
-			ErrorString: "nil order",
+			ErrorString: "unknown order status",
 		},
 	}
 
@@ -189,5 +129,37 @@ func Test_checkFinalizedOrderStatus(t *testing.T) {
 				t.Fatalf("expected error string %q not found in: %s", ct.ErrorString, err.Error())
 			}
 		}
+	}
+}
+
+func TestClient_ReplacementOrder(t *testing.T) {
+	account, order, _ := makeOrderFinalised(t, nil)
+	tc2 := testClient
+	tc2.dir.RenewalInfo = ""
+
+	certs, err := tc2.FetchCertificates(account, order.Certificate)
+	if err != nil {
+		t.Fatalf("unexpected error fetching certificates: %v", err)
+	}
+
+	if _, err := tc2.ReplacementOrder(account, certs[0], order.Identifiers); err == nil {
+		t.Fatalf("expected error, got none")
+	} else if err != ErrRenewalInfoNotSupported {
+		t.Fatalf("unexpected error replacing order: %v", err)
+	}
+
+	if _, err := testClient.ReplacementOrder(account, &x509.Certificate{Raw: []byte{1}}, order.Identifiers); err == nil {
+		t.Fatalf("expected error, got none")
+	}
+
+	newOrder, err := testClient.ReplacementOrder(account, certs[0], order.Identifiers)
+	if err != nil {
+		t.Fatalf("unexpected error replacing certificates: %v", err)
+	}
+	if !reflect.DeepEqual(newOrder.Identifiers, order.Identifiers) {
+		t.Fatalf("unexpected difference in replaced order identifiers")
+	}
+	if newOrder.Replaces == "" {
+		t.Fatalf("replace order identifier is empty")
 	}
 }

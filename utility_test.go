@@ -123,7 +123,7 @@ func makeAccount(t *testing.T) Account {
 	return account
 }
 
-func makeOrder(t *testing.T, identifiers ...Identifier) (Account, *Order) {
+func makeOrder(t *testing.T, identifiers ...Identifier) (Account, Order) {
 	if len(identifiers) == 0 {
 		identifiers = []Identifier{{Type: "dns", Value: randString() + ".com"}}
 	}
@@ -144,7 +144,7 @@ func makeOrder(t *testing.T, identifiers ...Identifier) (Account, *Order) {
 	return account, order
 }
 
-func makeOrderFinalised(t *testing.T, supportedChalTypes []string, identifiers ...Identifier) (Account, *Order, crypto.Signer) {
+func makeOrderFinalised(t *testing.T, supportedChalTypes []string, identifiers ...Identifier) (Account, Order, crypto.Signer) {
 	if len(supportedChalTypes) == 0 {
 		supportedChalTypes = []string{ChallengeTypeDNS01, ChallengeTypeHTTP01}
 	}
