@@ -15,7 +15,7 @@ var (
 	// ErrRenewalInfoNotSupported is returned by Client.GetRenewalInfo if the
 	// renewal info entry isn't present on the acme directory (ie, it's not
 	// supported by the acme server)
-	ErrRenewalInfoNotSupported = errors.New("renewal information endpoint not")
+	ErrRenewalInfoNotSupported = errors.New("renewal information endpoint not supported")
 )
 
 // Different possible challenge types provided by an ACME server.
