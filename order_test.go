@@ -1,6 +1,7 @@
 package acme
 
 import (
+	"crypto/x509"
 	"reflect"
 	"strings"
 	"testing"
@@ -55,14 +56,6 @@ func TestClient_FinalizeOrder(t *testing.T) {
 	makeOrderFinalised(t, nil)
 }
 
-func TestClient_NewOrderDomains(t *testing.T) {
-	account := makeAccount(t)
-	_, err := testClient.NewOrderDomains(account)
-	if err == nil {
-		t.Fatalf("expected error, got none")
-	}
-}
-
 func Test_checkFinalizedOrderStatus(t *testing.T) {
 	tests := []struct {
 		Order       Order
@@ -110,6 +103,11 @@ func Test_checkFinalizedOrderStatus(t *testing.T) {
 			HasError:    true,
 			ErrorString: "unknown order status",
 		},
+		{
+			Order:       Order{},
+			HasError:    true,
+			ErrorString: "unknown order status",
+		},
 	}
 
 	for _, ct := range tests {
@@ -131,5 +129,37 @@ func Test_checkFinalizedOrderStatus(t *testing.T) {
 				t.Fatalf("expected error string %q not found in: %s", ct.ErrorString, err.Error())
 			}
 		}
+	}
+}
+
+func TestClient_ReplacementOrder(t *testing.T) {
+	account, order, _ := makeOrderFinalised(t, nil)
+	tc2 := testClient
+	tc2.dir.RenewalInfo = ""
+
+	certs, err := tc2.FetchCertificates(account, order.Certificate)
+	if err != nil {
+		t.Fatalf("unexpected error fetching certificates: %v", err)
+	}
+
+	if _, err := tc2.ReplacementOrder(account, certs[0], order.Identifiers); err == nil {
+		t.Fatalf("expected error, got none")
+	} else if err != ErrRenewalInfoNotSupported {
+		t.Fatalf("unexpected error replacing order: %v", err)
+	}
+
+	if _, err := testClient.ReplacementOrder(account, &x509.Certificate{Raw: []byte{1}}, order.Identifiers); err == nil {
+		t.Fatalf("expected error, got none")
+	}
+
+	newOrder, err := testClient.ReplacementOrder(account, certs[0], order.Identifiers)
+	if err != nil {
+		t.Fatalf("unexpected error replacing certificates: %v", err)
+	}
+	if !reflect.DeepEqual(newOrder.Identifiers, order.Identifiers) {
+		t.Fatalf("unexpected difference in replaced order identifiers")
+	}
+	if newOrder.Replaces == "" {
+		t.Fatalf("replace order identifier is empty")
 	}
 }
