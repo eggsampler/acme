@@ -133,6 +133,12 @@ func Test_checkFinalizedOrderStatus(t *testing.T) {
 }
 
 func TestClient_ReplacementOrder(t *testing.T) {
+
+	if testClient.dir.RenewalInfo == "" {
+		t.Skip("acme server does not support ari renewals")
+		return
+	}
+
 	account, order, _ := makeOrderFinalised(t, nil)
 	tc2 := testClient
 	tc2.dir.RenewalInfo = ""
