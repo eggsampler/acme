@@ -396,7 +396,7 @@ func fetchRoot() []byte {
 	for _, v := range certPaths {
 		bPem, err := ioutil.ReadFile(v)
 		if err != nil {
-			log.Printf("error reading: %s", v)
+			log.Printf("error reading: %s - %v", v, err)
 			continue
 		}
 		certsPem = append(certsPem, "# "+v+"\n"+strings.TrimSpace(string(bPem)))

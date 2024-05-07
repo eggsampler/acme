@@ -105,6 +105,7 @@ func Test_checkFinalizedOrderStatus(t *testing.T) {
 		},
 		{
 			Order:       Order{},
+			Finished:    true,
 			HasError:    true,
 			ErrorString: "unknown order status",
 		},
