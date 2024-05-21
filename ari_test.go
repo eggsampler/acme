@@ -70,22 +70,43 @@ func TestClient_IssueReplacementCert(t *testing.T) {
 
 	// Replacing the original order should work
 	t.Log("Issuing first replacement order")
-	replacementOrder1, err := makeReplacementOrderFinalized(t, order, account, nil)
+	replacementOrder, err := makeReplacementOrderFinalized(t, order, account, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Replacing the replacement should work
 	t.Log("Issuing second replacement order")
-	_, err = makeReplacementOrderFinalized(t, replacementOrder1, account, nil)
+	_, err = makeReplacementOrderFinalized(t, replacementOrder, account, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Attempting to replace a previously replaced order should fail
+	// Attempting to replace a previously replacement order should fail.
 	t.Log("Should not be able to create a duplicate replacement")
-	_, err = makeReplacementOrderFinalized(t, replacementOrder1, account, nil)
+	_, err = makeReplacementOrderFinalized(t, replacementOrder, account, nil, false)
 	if err == nil {
+		t.Fatal(err)
+	}
+}
+
+func TestClient_FailedReplacementOrderAllowsAnotherReplacement(t *testing.T) {
+	t.Log("Issuing initial order")
+	account, order, _ := makeOrderFinalised(t, nil)
+	if order.Certificate == "" {
+		t.Fatalf("no certificate: %+v", order)
+	}
+
+	t.Log("Issuing replacement order which will intentionally fail")
+	_, err := makeReplacementOrderFinalized(t, order, account, nil, true)
+	if err == nil {
+		t.Fatal(err)
+	}
+
+	// Attempting to replace a previously failed replacement order should pass
+	t.Log("Issuing replacement order for a parent order who previously had a failed replacement order")
+	_, err = makeReplacementOrderFinalized(t, order, account, nil, false)
+	if err != nil {
 		t.Fatal(err)
 	}
 }

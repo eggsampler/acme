@@ -151,7 +151,7 @@ func makeOrderFinalised(t *testing.T, supportedChalTypes []string, identifiers .
 
 	acct, order := makeOrder(t, identifiers...)
 
-	err := validateChallenges(t, order, acct, supportedChalTypes)
+	err := validateChallenges(t, order, acct, supportedChalTypes, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -185,7 +185,7 @@ func makeOrderFinalised(t *testing.T, supportedChalTypes []string, identifiers .
 // given order, creates a replacement order for the given order, and finalizes
 // it. It differs from makeOrder and makeOrderFinalized in that it does not
 // create a new Account object each time it's called.
-func makeReplacementOrderFinalized(t *testing.T, order Order, account Account, supportedChalTypes []string) (Order, error) {
+func makeReplacementOrderFinalized(t *testing.T, order Order, account Account, supportedChalTypes []string, challengesShouldFail bool) (Order, error) {
 	certs, err := testClient.FetchCertificates(account, order.Certificate)
 	if err != nil {
 		return Order{}, fmt.Errorf("expected no error, got: %v", err)
@@ -199,7 +199,7 @@ func makeReplacementOrderFinalized(t *testing.T, order Order, account Account, s
 		return Order{}, fmt.Errorf("expected no error, got: %v", err)
 	}
 
-	err = validateChallenges(t, replacementOrder, account, supportedChalTypes)
+	err = validateChallenges(t, replacementOrder, account, supportedChalTypes, challengesShouldFail)
 	if err != nil {
 		return Order{}, err
 	}
@@ -249,7 +249,7 @@ func makeReplacementOrderFinalized(t *testing.T, order Order, account Account, s
 
 // validateChallenges validates all the challenges for each authorization on the
 // given order or returns an error.
-func validateChallenges(t *testing.T, order Order, account Account, supportedChalTypes []string) error {
+func validateChallenges(t *testing.T, order Order, account Account, supportedChalTypes []string, challengesShouldFail bool) error {
 	if supportedChalTypes == nil {
 		supportedChalTypes = []string{ChallengeTypeDNS01, ChallengeTypeHTTP01}
 	}
@@ -281,8 +281,18 @@ func validateChallenges(t *testing.T, order Order, account Account, supportedCha
 			return fmt.Errorf("unexpected status %q on challenge: %+v", chal.Status, chal)
 		}
 
-		preChallenge(account, auth, chal)
-		defer postChallenge(account, auth, chal)
+		if challengesShouldFail {
+			// We want to trigger the VA's DNS resolver to return SERVFAIL or
+			// some other type of DNS badness so we can see how the client
+			// reacts to VA errors.
+			for _, id := range order.Identifiers {
+				failPreChallenge(chal, id.Value)
+				defer failPostChallenge(chal, id.Value)
+			}
+		} else {
+			preChallenge(account, auth, chal)
+			defer postChallenge(account, auth, chal)
+		}
 
 		updatedChal, err := testClient.UpdateChallenge(account, chal)
 		if err != nil {
@@ -331,6 +341,75 @@ func doPost(name string, req interface{}) {
 	}
 	if _, err := http.Post("http://localhost:8055/"+name, "application/json", bytes.NewReader(reqJSON)); err != nil {
 		panic(fmt.Sprintf("error posting boulder %s: %v", name, err))
+	}
+}
+
+// failPreChallenge causes challtestsrv to respond with bogus data/SERVFAIL for
+// the given domain which will trigger the VA to return a validation failure.
+func failPreChallenge(chal Challenge, domain string) {
+	switch chal.Type {
+	case ChallengeTypeDNS01:
+		records := []string{domain, "_acme-challenge." + domain}
+		for _, r := range records {
+			setReq := struct {
+				Host string `json:"host"`
+			}{
+				Host: r,
+			}
+			doPost("set-servfail", setReq)
+		}
+	case ChallengeTypeHTTP01:
+		addReq := struct {
+			Token   string `json:"token"`
+			Content string `json:"content"`
+		}{
+			Token:   "bad",
+			Content: "chall",
+		}
+		doPost("add-http01", addReq)
+
+		addReq2 := struct {
+			Host string `json:"host"`
+		}{
+			Host: domain,
+		}
+		doPost("set-servfail", addReq2)
+
+	default:
+		panic("post: unsupported challenge type: " + chal.Type)
+	}
+}
+
+// failPostChallenge cleans up after failPreChallenge and resets challtestsrv.
+func failPostChallenge(chal Challenge, domain string) {
+	switch chal.Type {
+	case ChallengeTypeDNS01:
+		records := []string{domain, "_acme-challenge." + domain}
+		for _, r := range records {
+			setReq := struct {
+				Host string `json:"host"`
+			}{
+				Host: r,
+			}
+			doPost("clear-servfail", setReq)
+		}
+	case ChallengeTypeHTTP01:
+		addReq := struct {
+			Token string `json:"token"`
+		}{
+			Token: "bad",
+		}
+		doPost("del-http01", addReq)
+
+		addReq2 := struct {
+			Host string `json:"host"`
+		}{
+			Host: domain,
+		}
+		doPost("clear-servfail", addReq2)
+
+	default:
+		panic("post: unsupported challenge type: " + chal.Type)
 	}
 }
 
