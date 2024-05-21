@@ -97,8 +97,20 @@ func TestClient_FailedReplacementOrderAllowsAnotherReplacement(t *testing.T) {
 		t.Fatalf("no certificate: %+v", order)
 	}
 
+	// Explicitly deactivate the previous authorization so the VA has to
+	// re-validate the order and encounter a failure. Upon receiving a
+	// validation failure, Pebble marks an order as invalid which is what we
+	// need.
+	auth, err := testClient.DeactivateAuthorization(account, order.Authorizations[0])
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	if auth.Status != "deactivated" {
+		t.Fatalf("expected deactivated status, got: %s", auth.Status)
+	}
+
 	t.Log("Issuing replacement order which will intentionally fail")
-	_, err := makeReplacementOrderFinalized(t, order, account, nil, true)
+	_, err = makeReplacementOrderFinalized(t, order, account, nil, true)
 	if err == nil {
 		t.Fatal(err)
 	}
