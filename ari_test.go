@@ -8,6 +8,11 @@ import (
 )
 
 func TestClient_GetRenewalInfo(t *testing.T) {
+	if testClient.dir.RenewalInfo == "" {
+		t.Skip("acme server does not support ari renewals")
+		return
+	}
+
 	account, order, _ := makeOrderFinalised(t, nil)
 	if order.Certificate == "" {
 		t.Fatalf("no certificate: %+v", order)
@@ -62,6 +67,11 @@ func TestClient_GetRenewalInfo(t *testing.T) {
 }
 
 func TestClient_IssueReplacementCert(t *testing.T) {
+	if testClient.dir.RenewalInfo == "" {
+		t.Skip("acme server does not support ari renewals")
+		return
+	}
+
 	t.Log("Issuing initial order")
 	account, order, _ := makeOrderFinalised(t, nil)
 	if order.Certificate == "" {
@@ -91,6 +101,11 @@ func TestClient_IssueReplacementCert(t *testing.T) {
 }
 
 func TestClient_FailedReplacementOrderAllowsAnotherReplacement(t *testing.T) {
+	if testClient.dir.RenewalInfo == "" {
+		t.Skip("acme server does not support ari renewals")
+		return
+	}
+
 	t.Log("Issuing initial order")
 	account, order, _ := makeOrderFinalised(t, nil)
 	if order.Certificate == "" {
