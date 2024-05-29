@@ -151,47 +151,9 @@ func makeOrderFinalised(t *testing.T, supportedChalTypes []string, identifiers .
 
 	acct, order := makeOrder(t, identifiers...)
 
-	for _, authURL := range order.Authorizations {
-
-		auth, err := testClient.FetchAuthorization(acct, authURL)
-		if err != nil {
-			t.Fatalf("unexpected error fetching authorization: %v", err)
-		}
-
-		// panic(fmt.Sprintf("AUTH: %+v\n\nORDER: %+v", auth, order))
-
-		if auth.Status == "valid" {
-			continue
-		}
-
-		if auth.Status != "pending" {
-			t.Fatalf("expected auth status pending, got: %v", auth.Status)
-		}
-
-		chalType := supportedChalTypes[mrand.Intn(len(supportedChalTypes))]
-		chal, ok := auth.ChallengeMap[chalType]
-		if !ok {
-			t.Skipf("skipping, no supported challenge %q (%v) in challenges: %v", chalType, supportedChalTypes, auth.ChallengeTypes)
-		}
-
-		if chal.Status == "valid" {
-			continue
-		}
-		if chal.Status != "pending" {
-			t.Fatalf("unexpected status %q on challenge: %+v", chal.Status, chal)
-		}
-
-		preChallenge(acct, auth, chal)
-		defer postChallenge(acct, auth, chal)
-
-		updatedChal, err := testClient.UpdateChallenge(acct, chal)
-		if err != nil {
-			t.Fatalf("error updating challenge %s : %v", chal.URL, err)
-		}
-
-		if updatedChal.Status != "valid" {
-			t.Fatalf("unexpected updated challenge status %q on challenge: %+v", updatedChal.Status, updatedChal)
-		}
+	err := validateChallenges(t, order, acct, supportedChalTypes, false)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
 	}
 
 	updatedOrder, err := testClient.FetchOrder(acct, order.URL)
@@ -217,6 +179,132 @@ func makeOrderFinalised(t *testing.T, supportedChalTypes []string, identifiers .
 	}
 
 	return acct, finalizedOrder, privKey
+}
+
+// makeReplacementOrderFinalized is a helper that fetches a certificate from the
+// given order, creates a replacement order for the given order, and finalizes
+// it. It differs from makeOrder and makeOrderFinalized in that it does not
+// create a new Account object each time it's called.
+func makeReplacementOrderFinalized(t *testing.T, order Order, account Account, supportedChalTypes []string, challengesShouldFail bool) (Order, error) {
+	certs, err := testClient.FetchCertificates(account, order.Certificate)
+	if err != nil {
+		return Order{}, fmt.Errorf("expected no error, got: %v", err)
+	}
+	if len(certs) < 2 {
+		return Order{}, fmt.Errorf("no certs")
+	}
+
+	replacementOrder, err := testClient.ReplacementOrder(account, certs[0], order.Identifiers)
+	if err != nil {
+		return Order{}, fmt.Errorf("expected no error, got: %v", err)
+	}
+
+	err = validateChallenges(t, replacementOrder, account, supportedChalTypes, challengesShouldFail)
+	if err != nil {
+		return Order{}, err
+	}
+
+	updatedOrder, err := testClient.FetchOrder(account, replacementOrder.URL)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// We can ignore updatedOrder after this.
+	if updatedOrder.Status != "ready" {
+		t.Fatal("order not ready")
+	}
+
+	//  Check that the replacement order Replaces field is populated with the
+	//  expected value.
+	ariCertID, err := GenerateARICertID(certs[0])
+	if err != nil {
+		return Order{}, fmt.Errorf("expected no error, got: %v", err)
+	}
+	if replacementOrder.Replaces != ariCertID {
+		return Order{}, fmt.Errorf("%s != %s", replacementOrder.Replaces, ariCertID)
+	}
+
+	// Make sure that the replacement order shares at least one identifier as
+	// the order it is replacing. We'll do this by sending the exact identifiers
+	// as the original order.
+	// See: https://datatracker.ietf.org/doc/html/draft-ietf-acme-ari-03#section-5
+	var domains []string
+	for _, id := range replacementOrder.Identifiers {
+		domains = append(domains, id.Value)
+	}
+
+	csr, _ := makeCSR(t, domains)
+
+	// Issue a certificate for the replacement order.
+	replacementOrder, err = testClient.FinalizeOrder(account, replacementOrder, csr)
+	if err != nil {
+		return Order{}, fmt.Errorf("unexpected error: %v", err)
+	}
+	if replacementOrder.Status != "valid" {
+		return Order{}, fmt.Errorf("order not valid")
+	}
+
+	return replacementOrder, nil
+}
+
+// validateChallenges validates all the challenges for each authorization on the
+// given order or returns an error.
+func validateChallenges(t *testing.T, order Order, account Account, supportedChalTypes []string, challengesShouldFail bool) error {
+	if supportedChalTypes == nil {
+		supportedChalTypes = []string{ChallengeTypeDNS01, ChallengeTypeHTTP01}
+	}
+
+	for _, authURL := range order.Authorizations {
+		auth, err := testClient.FetchAuthorization(account, authURL)
+		if err != nil {
+			return fmt.Errorf("unexpected error fetching authorization: %v", err)
+		}
+
+		if auth.Status == "valid" {
+			continue
+		}
+
+		if auth.Status != "pending" {
+			return fmt.Errorf("expected auth status pending, got: %v", auth.Status)
+		}
+
+		chalType := supportedChalTypes[mrand.Intn(len(supportedChalTypes))]
+		chal, ok := auth.ChallengeMap[chalType]
+		if !ok {
+			t.Skipf("skipping, no supported challenge %q (%v) in challenges: %v", chalType, supportedChalTypes, auth.ChallengeTypes)
+		}
+
+		if chal.Status == "valid" {
+			continue
+		}
+		if chal.Status != "pending" {
+			return fmt.Errorf("unexpected status %q on challenge: %+v", chal.Status, chal)
+		}
+
+		if challengesShouldFail {
+			// We want to trigger the VA's DNS resolver to return SERVFAIL or
+			// some other type of DNS badness so we can see how the client
+			// reacts to VA errors.
+			for _, id := range order.Identifiers {
+				failPreChallenge(chal, id.Value)
+				defer failPostChallenge(chal, id.Value)
+			}
+		} else {
+			preChallenge(account, auth, chal)
+			defer postChallenge(account, auth, chal)
+		}
+
+		updatedChal, err := testClient.UpdateChallenge(account, chal)
+		if err != nil {
+			return fmt.Errorf("error updating challenge %s : %v", chal.URL, err)
+		}
+
+		if updatedChal.Status != "valid" {
+			return fmt.Errorf("unexpected updated challenge status %q on challenge: %+v", updatedChal.Status, updatedChal)
+		}
+	}
+
+	return nil
 }
 
 func makeCSR(t *testing.T, domains []string) (*x509.CertificateRequest, crypto.Signer) {
@@ -253,6 +341,75 @@ func doPost(name string, req interface{}) {
 	}
 	if _, err := http.Post("http://localhost:8055/"+name, "application/json", bytes.NewReader(reqJSON)); err != nil {
 		panic(fmt.Sprintf("error posting boulder %s: %v", name, err))
+	}
+}
+
+// failPreChallenge causes challtestsrv to respond with bogus data/SERVFAIL for
+// the given domain which will trigger the VA to return a validation failure.
+func failPreChallenge(chal Challenge, domain string) {
+	switch chal.Type {
+	case ChallengeTypeDNS01:
+		records := []string{domain, "_acme-challenge." + domain}
+		for _, r := range records {
+			setReq := struct {
+				Host string `json:"host"`
+			}{
+				Host: r,
+			}
+			doPost("set-servfail", setReq)
+		}
+	case ChallengeTypeHTTP01:
+		addReq := struct {
+			Token   string `json:"token"`
+			Content string `json:"content"`
+		}{
+			Token:   "bad",
+			Content: "chall",
+		}
+		doPost("add-http01", addReq)
+
+		addReq2 := struct {
+			Host string `json:"host"`
+		}{
+			Host: domain,
+		}
+		doPost("set-servfail", addReq2)
+
+	default:
+		panic("post: unsupported challenge type: " + chal.Type)
+	}
+}
+
+// failPostChallenge cleans up after failPreChallenge and resets challtestsrv.
+func failPostChallenge(chal Challenge, domain string) {
+	switch chal.Type {
+	case ChallengeTypeDNS01:
+		records := []string{domain, "_acme-challenge." + domain}
+		for _, r := range records {
+			setReq := struct {
+				Host string `json:"host"`
+			}{
+				Host: r,
+			}
+			doPost("clear-servfail", setReq)
+		}
+	case ChallengeTypeHTTP01:
+		addReq := struct {
+			Token string `json:"token"`
+		}{
+			Token: "bad",
+		}
+		doPost("del-http01", addReq)
+
+		addReq2 := struct {
+			Host string `json:"host"`
+		}{
+			Host: domain,
+		}
+		doPost("clear-servfail", addReq2)
+
+	default:
+		panic("post: unsupported challenge type: " + chal.Type)
 	}
 }
 

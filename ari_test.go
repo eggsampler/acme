@@ -8,8 +8,8 @@ import (
 )
 
 func TestClient_GetRenewalInfo(t *testing.T) {
-	if testClientMeta.Software == clientPebble {
-		t.Skip("pebble doesnt support ari")
+	if testClient.dir.RenewalInfo == "" {
+		t.Skip("acme server does not support ari renewals")
 		return
 	}
 
@@ -18,13 +18,16 @@ func TestClient_GetRenewalInfo(t *testing.T) {
 		t.Fatalf("no certificate: %+v", order)
 	}
 	certs, err := testClient.FetchCertificates(account, order.Certificate)
+	t.Logf("Issued serial %s\n", certs[0].SerialNumber.String())
 	if err != nil {
-		t.Fatalf("expeceted no error, got: %v", err)
+		t.Fatalf("expected no error, got: %v", err)
 	}
 	if len(certs) < 2 {
 		t.Fatalf("no certs")
 	}
+
 	renewalInfo, err := testClient.GetRenewalInfo(certs[0])
+	t.Logf("Suggested renewal window for new issuance: %v\n", renewalInfo.SuggestedWindow)
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
@@ -39,6 +42,99 @@ func TestClient_GetRenewalInfo(t *testing.T) {
 	}
 	if renewalInfo.SuggestedWindow.End.Before(renewalInfo.SuggestedWindow.Start) {
 		t.Fatalf("suggested window end is before start?")
+	}
+
+	err = testClient.RevokeCertificate(account, certs[0], account.PrivateKey, ReasonUnspecified)
+	if err != nil {
+		t.Fatalf("failed to revoke certificate: %v", err)
+	}
+
+	// The renewal window should adjust to allow immediate renewal
+	renewalInfo, err = testClient.GetRenewalInfo(certs[0])
+	t.Logf("Suggested renewal window for revoked certificate: %v\n", renewalInfo.SuggestedWindow)
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	if !renewalInfo.SuggestedWindow.Start.Before(time.Now()) {
+		t.Fatalf("suggested window start is in the past?")
+	}
+	if !renewalInfo.SuggestedWindow.End.Before(time.Now()) {
+		t.Fatalf("suggested window start is in the past?")
+	}
+	if renewalInfo.SuggestedWindow.End.Before(renewalInfo.SuggestedWindow.Start) {
+		t.Fatalf("suggested window end is before start?")
+	}
+}
+
+func TestClient_IssueReplacementCert(t *testing.T) {
+	if testClient.dir.RenewalInfo == "" {
+		t.Skip("acme server does not support ari renewals")
+		return
+	}
+
+	t.Log("Issuing initial order")
+	account, order, _ := makeOrderFinalised(t, nil)
+	if order.Certificate == "" {
+		t.Fatalf("no certificate: %+v", order)
+	}
+
+	// Replacing the original order should work
+	t.Log("Issuing first replacement order")
+	replacementOrder, err := makeReplacementOrderFinalized(t, order, account, nil, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Replacing the replacement should work
+	t.Log("Issuing second replacement order")
+	_, err = makeReplacementOrderFinalized(t, replacementOrder, account, nil, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Attempting to replace a previously replacement order should fail.
+	t.Log("Should not be able to create a duplicate replacement")
+	_, err = makeReplacementOrderFinalized(t, replacementOrder, account, nil, false)
+	if err == nil {
+		t.Fatal(err)
+	}
+}
+
+func TestClient_FailedReplacementOrderAllowsAnotherReplacement(t *testing.T) {
+	if testClient.dir.RenewalInfo == "" {
+		t.Skip("acme server does not support ari renewals")
+		return
+	}
+
+	t.Log("Issuing initial order")
+	account, order, _ := makeOrderFinalised(t, nil)
+	if order.Certificate == "" {
+		t.Fatalf("no certificate: %+v", order)
+	}
+
+	// Explicitly deactivate the previous authorization so the VA has to
+	// re-validate the order and encounter a failure. Upon receiving a
+	// validation failure, Pebble marks an order as invalid which is what we
+	// need.
+	auth, err := testClient.DeactivateAuthorization(account, order.Authorizations[0])
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	if auth.Status != "deactivated" {
+		t.Fatalf("expected deactivated status, got: %s", auth.Status)
+	}
+
+	t.Log("Issuing replacement order which will intentionally fail")
+	_, err = makeReplacementOrderFinalized(t, order, account, nil, true)
+	if err == nil {
+		t.Fatal(err)
+	}
+
+	// Attempting to replace a previously failed replacement order should pass
+	t.Log("Issuing replacement order for a parent order who previously had a failed replacement order")
+	_, err = makeReplacementOrderFinalized(t, order, account, nil, false)
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 
