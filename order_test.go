@@ -15,7 +15,7 @@ func TestClient_NewOrder(t *testing.T) {
 	}
 
 	identifiers := []Identifier{{"dns", randString() + ".com"}}
-	order, err := testClient.NewOrder(account, identifiers, "")
+	order, err := testClient.NewOrder(account, identifiers)
 	if err != nil {
 		t.Fatalf("unexpected error making order: %v", err)
 	}
@@ -24,7 +24,7 @@ func TestClient_NewOrder(t *testing.T) {
 	}
 
 	badIdentifiers := []Identifier{{"bad", randString() + ".com"}}
-	_, err = testClient.NewOrder(account, badIdentifiers, "")
+	_, err = testClient.NewOrder(account, badIdentifiers)
 	if err == nil {
 		t.Fatal("expected error, got none")
 	}
@@ -148,17 +148,17 @@ func TestClient_ReplacementOrder(t *testing.T) {
 		t.Fatalf("unexpected error fetching certificates: %v", err)
 	}
 
-	if _, err := tc2.ReplacementOrder(account, certs[0], order.Identifiers, ""); err == nil {
+	if _, err := tc2.ReplacementOrder(account, certs[0], order.Identifiers); err == nil {
 		t.Fatalf("expected error, got none")
 	} else if err != ErrRenewalInfoNotSupported {
 		t.Fatalf("unexpected error replacing order: %v", err)
 	}
 
-	if _, err := testClient.ReplacementOrder(account, &x509.Certificate{Raw: []byte{1}}, order.Identifiers, ""); err == nil {
+	if _, err := testClient.ReplacementOrder(account, &x509.Certificate{Raw: []byte{1}}, order.Identifiers); err == nil {
 		t.Fatalf("expected error, got none")
 	}
 
-	newOrder, err := testClient.ReplacementOrder(account, certs[0], order.Identifiers, "")
+	newOrder, err := testClient.ReplacementOrder(account, certs[0], order.Identifiers)
 	if err != nil {
 		t.Fatalf("unexpected error replacing certificates: %v", err)
 	}
@@ -183,12 +183,13 @@ func TestClient_NewOrderWithProfile(t *testing.T) {
 	}
 
 	for profile := range testClient.dir.Meta.Profiles {
-		order, err := testClient.NewOrder(account, []Identifier{{"dns", randString() + ".com"}}, profile)
+		ext := OrderExtension{Profile: profile}
+		order, err := testClient.NewOrderExtension(account, []Identifier{{"dns", randString() + ".com"}}, ext)
 		if err != nil {
 			t.Fatalf("unexpected error making order: %v", err)
 		}
 		if !reflect.DeepEqual(order.Profile, profile) {
-			t.Fatalf("order profile mismatch, profile: %+v, order profile: %+v", profile, order.Profile)
+			t.Fatalf("order Profile mismatch, Profile: %+v, order Profile: %+v", profile, order.Profile)
 		}
 	}
 }

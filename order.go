@@ -9,18 +9,27 @@ import (
 	"time"
 )
 
+type OrderExtension struct {
+	Profile string
+}
+
 // NewOrder initiates a new order for a new certificate. This method does not use ACME Renewal Info.
-func (c Client) NewOrder(account Account, identifiers []Identifier, profile string) (Order, error) {
-	return c.ReplacementOrder(account, nil, identifiers, profile)
+func (c Client) NewOrder(account Account, identifiers []Identifier) (Order, error) {
+	return c.ReplacementOrder(account, nil, identifiers)
 }
 
 // NewOrderDomains takes a list of domain dns identifiers for a new certificate. Essentially a helper function.
-func (c Client) NewOrderDomains(account Account, profile string, domains ...string) (Order, error) {
+func (c Client) NewOrderDomains(account Account, domains ...string) (Order, error) {
 	var identifiers []Identifier
 	for _, d := range domains {
 		identifiers = append(identifiers, Identifier{Type: "dns", Value: d})
 	}
-	return c.ReplacementOrder(account, nil, identifiers, profile)
+	return c.ReplacementOrder(account, nil, identifiers)
+}
+
+// NewOrderExtension takes a struct providing any extensions onto the order
+func (c Client) NewOrderExtension(account Account, identifiers []Identifier, ext OrderExtension) (Order, error) {
+	return c.ReplacementOrderExtension(account, nil, identifiers, ext)
 }
 
 // ReplacementOrder takes an existing *x509.Certificate and initiates a new
@@ -31,7 +40,12 @@ func (c Client) NewOrderDomains(account Account, profile string, domains ...stri
 // must match the list of identifiers from the parent order to be considered as
 // a valid replacement order.
 // See https://datatracker.ietf.org/doc/html/draft-ietf-acme-ari-03#section-5
-func (c Client) ReplacementOrder(account Account, oldCert *x509.Certificate, identifiers []Identifier, profile string) (Order, error) {
+func (c Client) ReplacementOrder(account Account, oldCert *x509.Certificate, identifiers []Identifier) (Order, error) {
+	return c.ReplacementOrderExtension(account, oldCert, identifiers, OrderExtension{})
+}
+
+// ReplacementOrderExtension takes a struct providing any extensions onto the order
+func (c Client) ReplacementOrderExtension(account Account, oldCert *x509.Certificate, identifiers []Identifier, ext OrderExtension) (Order, error) {
 	// If an old cert being replaced is present and the acme directory doesn't list a RenewalInfo endpoint,
 	// throw an error. This endpoint being present indicates support for ARI.
 	if oldCert != nil && c.dir.RenewalInfo == "" {
@@ -43,19 +57,19 @@ func (c Client) ReplacementOrder(account Account, oldCert *x509.Certificate, ide
 	newOrderReq := struct {
 		Identifiers []Identifier `json:"identifiers"`
 		Replaces    string       `json:"replaces,omitempty"`
-		Profile     string       `json:"profile,omitempty"`
+		Profile     string       `json:"Profile,omitempty"`
 	}{
 		Identifiers: identifiers,
 	}
 
 	newOrderResp := Order{}
 
-	if profile != "" {
-		_, ok := c.Directory().Meta.Profiles[profile]
+	if ext.Profile != "" {
+		_, ok := c.Directory().Meta.Profiles[ext.Profile]
 		if !ok {
-			return Order{}, fmt.Errorf("requested profile %q not advertised by directory", profile)
+			return Order{}, fmt.Errorf("requested Profile not advertised by directory: %v", ext.Profile)
 		}
-		newOrderReq.Profile = profile
+		newOrderReq.Profile = ext.Profile
 	}
 
 	// If present, add the ari cert ID from the original/old certificate
