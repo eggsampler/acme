@@ -151,7 +151,7 @@ type Order struct {
 	Status         string       `json:"status"`
 	Expires        time.Time    `json:"expires"`
 	Identifiers    []Identifier `json:"identifiers"`
-	Profile        string       `json:"profile,omitempty"`
+	Profile        string       `json:"Profile,omitempty"`
 	NotBefore      time.Time    `json:"notBefore"`
 	NotAfter       time.Time    `json:"notAfter"`
 	Error          Problem      `json:"error"`

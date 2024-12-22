@@ -129,7 +129,7 @@ func makeOrder(t *testing.T, identifiers ...Identifier) (Account, Order) {
 	}
 	account := makeAccount(t)
 
-	order, err := testClient.NewOrder(account, identifiers, "")
+	order, err := testClient.NewOrder(account, identifiers)
 	if err != nil {
 		t.Fatalf("error making order: %v", err)
 	}
@@ -194,7 +194,7 @@ func makeReplacementOrderFinalized(t *testing.T, order Order, account Account, s
 		return Order{}, fmt.Errorf("no certs")
 	}
 
-	replacementOrder, err := testClient.ReplacementOrder(account, certs[0], order.Identifiers, "")
+	replacementOrder, err := testClient.ReplacementOrder(account, certs[0], order.Identifiers)
 	if err != nil {
 		return Order{}, fmt.Errorf("expected no error, got: %v", err)
 	}

@@ -105,7 +105,7 @@ func main() {
 
 	// create a new order with the acme service given the provided identifiers
 	log.Printf("Creating new order for domains: %s", domainList)
-	order, err := client.NewOrder(account, ids, "")
+	order, err := client.NewOrder(account, ids)
 	if err != nil {
 		log.Fatalf("Error creating new order: %v", err)
 	}
