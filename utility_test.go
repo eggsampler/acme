@@ -428,15 +428,11 @@ func preChallenge(acct Account, auth Authorization, chal Challenge) {
 	case ChallengeTypeDNSAccount01:
 		acctHash := sha256.Sum256([]byte(acct.URL))
 		acctLabel := strings.ToLower(base32.StdEncoding.EncodeToString(acctHash[0:10]))
-		scope := "host"
-		if auth.Wildcard {
-			scope = "wildcard"
-		}
 		setReq := struct {
 			Host  string `json:"host"`
 			Value string `json:"value"`
 		}{
-			Host: "_" + acctLabel + "._acme-" + scope + "-challenge." +
+			Host: "_" + acctLabel + "._acme-challenge." +
 				auth.Identifier.Value + ".",
 			Value: EncodeDNS01KeyAuthorization(chal.KeyAuthorization),
 		}
@@ -481,11 +477,7 @@ func postChallenge(acct Account, auth Authorization, chal Challenge) {
 	case ChallengeTypeDNSAccount01:
 		acctHash := sha256.Sum256([]byte(acct.URL))
 		acctLabel := strings.ToLower(base32.StdEncoding.EncodeToString(acctHash[0:10]))
-		scope := "host"
-		if auth.Wildcard {
-			scope = "wildcard"
-		}
-		host := "_" + acctLabel + "._acme-" + scope + "-challenge." +
+		host := "_" + acctLabel + "._acme-challenge." +
 			auth.Identifier.Value + "."
 		clearReq := struct {
 			Host string `json:"host"`
