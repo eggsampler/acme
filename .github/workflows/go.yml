@@ -33,6 +33,8 @@ jobs:
         uses: actions/setup-go@v3
         with:
           go-version: ${{ matrix.go-version }}
+      - name: Set up Docker
+        uses: docker/setup-docker-action@v4
       - name: make pebble ${{ matrix.go-version }}
         run: make pebble
       - name: Send pebble coverage ${{ matrix.go-version }}
@@ -53,6 +55,8 @@ jobs:
         uses: actions/setup-go@v3
         with:
           go-version: ${{ matrix.go-version }}
+      - name: Set up Docker
+        uses: docker/setup-docker-action@v4
       - name: make boulder ${{ matrix.go-version }}
         run: make boulder
       - name: Send boulder coverage ${{ matrix.go-version }}
