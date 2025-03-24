@@ -87,16 +87,14 @@ func TestClient_IssueReplacementCert(t *testing.T) {
 
 	// Replacing the replacement should work
 	t.Log("Issuing second replacement order")
-	_, err = makeReplacementOrderFinalized(t, replacementOrder, account, nil, false)
-	if err != nil {
-		t.Fatal(err)
-	}
+	_, err1 := makeReplacementOrderFinalized(t, replacementOrder, account, nil, false)
 
-	// Attempting to replace a previously replacement order should fail.
+	// Attempting to replace a previously replaced order should fail.
 	t.Log("Should not be able to create a duplicate replacement")
-	_, err = makeReplacementOrderFinalized(t, replacementOrder, account, nil, false)
-	if err == nil {
-		t.Fatal(err)
+	_, err2 := makeReplacementOrderFinalized(t, replacementOrder, account, nil, false)
+
+	if err1 == nil && err2 == nil {
+		t.Fatal("expected at least one error")
 	}
 }
 

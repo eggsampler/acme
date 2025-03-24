@@ -532,9 +532,9 @@ func fetchRoot() []byte {
 	var certsPem []string
 
 	boulderPath := getPath("BOULDER_PATH", "boulder")
-	certPaths = append(certPaths, filepath.Join(boulderPath, ".hierarchy", "root-ecdsa.cert.pem"))
-	certPaths = append(certPaths, filepath.Join(boulderPath, ".hierarchy", "root-cert-ecdsa.pem"))
-	certPaths = append(certPaths, filepath.Join(boulderPath, ".hierarchy", "root-cert-rsa.pem"))
+	certPaths = append(certPaths, filepath.Join(boulderPath, "test", "certs", "webpki", "root-ecdsa.cert.pem"))
+	certPaths = append(certPaths, filepath.Join(boulderPath, "test", "certs", "webpki", "root-cert-ecdsa.pem"))
+	certPaths = append(certPaths, filepath.Join(boulderPath, "test", "certs", "webpki", "root-cert-rsa.pem"))
 
 	certPaths = append(certPaths, filepath.Join(boulderPath, "test", "wfe-tls", "minica.pem"))
 
