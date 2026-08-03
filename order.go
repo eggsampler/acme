@@ -57,7 +57,7 @@ func (c Client) ReplacementOrderExtension(account Account, oldCert *x509.Certifi
 	newOrderReq := struct {
 		Identifiers []Identifier `json:"identifiers"`
 		Replaces    string       `json:"replaces,omitempty"`
-		Profile     string       `json:"Profile,omitempty"`
+		Profile     string       `json:"profile,omitempty"`
 	}{
 		Identifiers: identifiers,
 	}

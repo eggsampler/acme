@@ -2,10 +2,24 @@ package acme
 
 import (
 	"crypto/x509"
+	"encoding/json"
 	"reflect"
 	"strings"
 	"testing"
 )
+
+func TestOrderProfileUsesLowercaseJSONField(t *testing.T) {
+	data, err := json.Marshal(Order{Profile: "shortlived"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), `"profile":"shortlived"`) {
+		t.Fatalf("order JSON = %s, want lowercase profile field", data)
+	}
+	if strings.Contains(string(data), `"Profile"`) {
+		t.Fatalf("order JSON = %s, must not contain uppercase Profile field", data)
+	}
+}
 
 func TestClient_NewOrder(t *testing.T) {
 	key := makePrivateKey(t)
