@@ -21,6 +21,16 @@ func TestOrderProfileUsesLowercaseJSONField(t *testing.T) {
 	}
 }
 
+func TestNewOrderRequestUsesLowercaseProfileField(t *testing.T) {
+	data, err := json.Marshal(newOrderRequest{Profile: "shortlived"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := string(data), `{"profile":"shortlived"}`; got != want {
+		t.Fatalf("request JSON = %s, want %s", got, want)
+	}
+}
+
 func TestClient_NewOrder(t *testing.T) {
 	key := makePrivateKey(t)
 	account, err := testClient.NewAccount(key, false, true)
