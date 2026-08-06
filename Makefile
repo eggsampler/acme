@@ -9,6 +9,14 @@ TEST_PATH ?= github.com/eggsampler/acme/v3
 CLIENT ?= unknown
 DOCKER_COMPOSE ?= docker compose
 
+# boulder-tools:latest isn't published, so use the tags boulder's own CI pins
+# Shell-expanded per recipe: the checkout doesn't exist when make parses this
+BOULDER_CI_YML = $(BOULDER_PATH)/.github/workflows/boulder-ci.yml
+BOULDER_TAGS = \
+	BOULDER_TOOLS_TAG=$$(awk '/^ *BOULDER_TOOLS_TAG: *$$/{getline; sub(/^ *- */,""); print; exit}' $(BOULDER_CI_YML)) \
+	BOULDER_VTCOMBOSERVER_TAG=$$(awk '/^ *BOULDER_VTCOMBOSERVER_TAG: *[^ ]/{sub(/^[^:]*: */,""); print; exit}' $(BOULDER_CI_YML))
+
+
 # tests the code against an already running ca instance
 # to actually do a test against pebble or boulder, including , see the 'pebble' or 'boulder' targets
 test:
@@ -61,11 +69,11 @@ boulder_setup:
 	-git clone --depth 1 https://github.com/letsencrypt/boulder.git $(BOULDER_PATH)
 	(cd $(BOULDER_PATH); git checkout -f main && git reset --hard HEAD && git pull -q)
 	make boulder_stop
-	(cd $(BOULDER_PATH); docker compose run --rm bsetup)
+	(cd $(BOULDER_PATH); $(BOULDER_TAGS) docker compose run --rm bsetup)
 
 # runs an instance of boulder
 boulder_start:
-	$(DOCKER_COMPOSE) -f $(BOULDER_PATH)/docker-compose.yml -f $(BOULDER_PATH)/docker-compose.next.yml -f docker-compose.boulder-temp.yml up -d
+	$(BOULDER_TAGS) $(DOCKER_COMPOSE) -f $(BOULDER_PATH)/docker-compose.yml -f $(BOULDER_PATH)/docker-compose.next.yml -f docker-compose.boulder-temp.yml up -d
 
 # waits until boulder responds
 boulder_wait:
@@ -73,4 +81,4 @@ boulder_wait:
 
 # stops the running docker instance
 boulder_stop:
-	$(DOCKER_COMPOSE) -f $(BOULDER_PATH)/docker-compose.yml -f $(BOULDER_PATH)/docker-compose.next.yml -f docker-compose.boulder-temp.yml down
+	$(BOULDER_TAGS) $(DOCKER_COMPOSE) -f $(BOULDER_PATH)/docker-compose.yml -f $(BOULDER_PATH)/docker-compose.next.yml -f docker-compose.boulder-temp.yml down
