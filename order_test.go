@@ -26,7 +26,7 @@ func TestNewOrderRequestUsesLowercaseProfileField(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(data), "profile":"shortlived") {
+	if !strings.Contains(string(data), `"profile":"shortlived"`) {
 		t.Fatalf("request JSON = %s, want lowercase profile field", data)
 	}
 }
