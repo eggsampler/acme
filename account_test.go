@@ -98,6 +98,12 @@ func TestClient_UpdateAccount(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
+	if testClientMeta.Software == clientBoulder {
+		// boulder accepts a contact update and ignores it, returning the
+		// account unchanged, so there is nothing to compare against.
+		return
+	}
+
 	if !reflect.DeepEqual(updatedAccount.Contact, contact) {
 		t.Fatalf("contact mismatch, expected: %v, got: %v", contact, updatedAccount.Contact)
 	}

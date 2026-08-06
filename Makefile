@@ -64,10 +64,12 @@ boulder: CLIENT = boulder
 boulder: boulder_setup boulder_start boulder_wait test boulder_stop
 
 # NB: this edits docker-compose.yml
+# The test/certs wipe is needed because generate.sh skips certs that already
+# exist, so stale state from an older boulder revision starves new services.
 boulder_setup:
 	mkdir -p $(BOULDER_PATH)
 	-git clone --depth 1 https://github.com/letsencrypt/boulder.git $(BOULDER_PATH)
-	(cd $(BOULDER_PATH); git checkout -f main && git reset --hard HEAD && git pull -q)
+	(cd $(BOULDER_PATH); git checkout -f main && git reset --hard HEAD && git pull -q && git clean -qfdx test/certs/)
 	make boulder_stop
 	(cd $(BOULDER_PATH); $(BOULDER_TAGS) docker compose run --rm bsetup)
 
