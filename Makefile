@@ -7,6 +7,7 @@ BOULDER_PATH ?= $(GOPATH)/src/github.com/letsencrypt/boulder
 PEBBLE_PATH ?= $(GOPATH)/src/github.com/letsencrypt/pebble
 TEST_PATH ?= github.com/eggsampler/acme/v3
 CLIENT ?= unknown
+DOCKER_COMPOSE ?= docker compose
 
 # tests the code against an already running ca instance
 # to actually do a test against pebble or boulder, including , see the 'pebble' or 'boulder' targets
@@ -39,7 +40,7 @@ pebble_setup:
 
 # runs an instance of pebble using docker
 pebble_start:
-	docker-compose -f $(PEBBLE_PATH)/docker-compose.yml up -d
+	$(DOCKER_COMPOSE) -f $(PEBBLE_PATH)/docker-compose.yml up -d
 
 # waits until pebble responds
 pebble_wait:
@@ -47,7 +48,7 @@ pebble_wait:
 
 # stops the running pebble instance
 pebble_stop:
-	docker-compose -f $(PEBBLE_PATH)/docker-compose.yml down
+	$(DOCKER_COMPOSE) -f $(PEBBLE_PATH)/docker-compose.yml down
 
 
 # sets up & runs boulder (in docker), tests, then stops boulder
@@ -64,7 +65,7 @@ boulder_setup:
 
 # runs an instance of boulder
 boulder_start:
-	docker-compose -f $(BOULDER_PATH)/docker-compose.yml -f $(BOULDER_PATH)/docker-compose.next.yml -f docker-compose.boulder-temp.yml up -d
+	$(DOCKER_COMPOSE) -f $(BOULDER_PATH)/docker-compose.yml -f $(BOULDER_PATH)/docker-compose.next.yml -f docker-compose.boulder-temp.yml up -d
 
 # waits until boulder responds
 boulder_wait:
@@ -72,4 +73,4 @@ boulder_wait:
 
 # stops the running docker instance
 boulder_stop:
-	docker-compose -f $(BOULDER_PATH)/docker-compose.yml -f $(BOULDER_PATH)/docker-compose.next.yml -f docker-compose.boulder-temp.yml down
+	$(DOCKER_COMPOSE) -f $(BOULDER_PATH)/docker-compose.yml -f $(BOULDER_PATH)/docker-compose.next.yml -f docker-compose.boulder-temp.yml down
