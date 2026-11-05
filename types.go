@@ -10,7 +10,7 @@ import (
 
 var (
 	// ErrUnsupportedKey is returned when an unsupported key type is encountered.
-	ErrUnsupportedKey = errors.New("acme: unknown key type; only RSA and ECDSA are supported")
+	ErrUnsupportedKey = errors.New("acme: unknown key type; only RSA, ECDSA, and ML-DSA are supported")
 
 	// ErrRenewalInfoNotSupported is returned by Client.GetRenewalInfo if the
 	// renewal info entry isn't present on the acme directory (ie, it's not
