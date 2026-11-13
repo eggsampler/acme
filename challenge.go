@@ -15,6 +15,30 @@ func EncodeDNS01KeyAuthorization(keyAuth string) string {
 	return base64.RawURLEncoding.EncodeToString(h[:])
 }
 
+// EncodeDNSPersist01AccountHash encodes a dns-persist-01 TXT record valid for given paramesters.
+// this function doesn't use client because need to manually use fixed accounturi, which pebble randomize.
+func EncodeDNSPersist01AccountHash(issuerdomain string, hashprefix string, account Account, domain string, iswild bool) string {
+	dlen := uint8(len(domain))
+	if dlen == 0 { // empty domain considered user opt out of the domain correlation mitigation
+		dlen = 1
+		domain = "*"
+	}
+	prehash := fmt.Sprintf("%c%s%s%s", dlen, domain, account.Thumbprint, account.URL)
+	h := sha256.Sum256([]byte(prehash))
+	hasheduri := fmt.Sprintf("sha-256/%s", base64.RawURLEncoding.EncodeToString(h[:]))
+	if iswild {
+		return fmt.Sprintf("%s; accounturi=%s%s; policy = wildcard", issuerdomain, hashprefix, hasheduri)
+	}
+	return fmt.Sprintf("%s; accounturi=%s%s", issuerdomain, hashprefix, hasheduri)
+}
+
+// CraftDNSPersistTxTRecord is a helper function that Crafts a dns-persist-01 TXT record string that will valid for auth's domain.
+func (c Client) CraftDNSPersistTXTRecord(account Account, auth Authorization) string {
+	issuerDomain := c.dir.Meta.IssuerDomainNames[0]
+	hashPrefix := c.dir.Meta.AccountHashPrefix
+	return EncodeDNSPersist01AccountHash(issuerDomain, hashPrefix, account, auth.Identifier.Value, auth.Wildcard)
+}
+
 // Helper function to determine whether a challenge is "finished" by its status.
 func checkUpdatedChallengeStatus(challenge Challenge) (bool, error) {
 	switch challenge.Status {
