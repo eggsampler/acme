@@ -63,9 +63,11 @@ type Directory struct {
 
 	// meta object containing directory metadata
 	Meta struct {
+		AccountHashPrefix       string            `json:"accountHashPrefix"`
 		TermsOfService          string            `json:"termsOfService"`
 		Website                 string            `json:"website"`
 		CaaIdentities           []string          `json:"caaIdentities"`
+		IssuerDomainNames       []string          `json:"issuerDomainNames"`
 		ExternalAccountRequired bool              `json:"externalAccountRequired"`
 		Profiles                map[string]string `json:"profiles"`
 	} `json:"meta"`
@@ -211,8 +213,8 @@ type Challenge struct {
 	// IssuerDomainNames is specific to the dns-persist-01 challenge type. It
 	// contains the list of issuer domain names accepted by the CA. For more
 	// information see:
-	// https://datatracker.ietf.org/doc/html/draft-ietf-acme-dns-persist-01#section-3.1
-	IssuerDomainNames []string `json:"issuer-domain-names,omitempty"`
+	// https://datatracker.ietf.org/doc/html/draft-ietf-acme-dns-persist-02#section-3.1
+	IssuerDomainNames []string `json:"issuerDomainNames,omitempty"`
 
 	// Authorization url provided by the rel="up" Link http header
 	AuthorizationURL string `json:"-"`

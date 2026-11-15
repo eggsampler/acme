@@ -23,6 +23,50 @@ func TestEncodeDns01KeyAuthorization(t *testing.T) {
 	}
 }
 
+func TestEncodeDNSPersist01accounthash(t *testing.T) {
+	// all example const are from https://www.ietf.org/archive/id/draft-ietf-acme-dns-persist-02.html#name-examples
+	exampleAccount := Account{
+		// example thumbprint from RFC7638, Section 3.1
+		Thumbprint: "NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs",
+		URL:        "https://ca.example/acct/123",
+	}
+	issuerdomain := "authority.example"
+	hashprefix := "https://ca.example/account-hash/"
+
+	tests := []struct {
+		Account      Account
+		domain       string
+		iswild       bool
+		expectedhash string
+	}{
+		{ // per domain record. https://www.ietf.org/archive/id/draft-ietf-acme-dns-persist-02.html#name-hashed-uri-example
+			Account:      exampleAccount,
+			domain:       "example.com",
+			expectedhash: "authority.example; accounturi=https://ca.example/account-hash/sha-256/5SQm7n6tPh2-PlLbCKGnViTXX5z19SCN4cPGQHSk-kw",
+		},
+
+		{ // opted out of domain corelation protection
+			Account:      exampleAccount,
+			domain:       "", // empty domain considered for global, "" should update "*" inside
+			expectedhash: "authority.example; accounturi=https://ca.example/account-hash/sha-256/NpDnSwUthQK8zCgFdefYxAdAVPnygMLbs9US6oO-5ug",
+		},
+
+		{ // test for wildcard policy
+			Account:      exampleAccount,
+			domain:       "example.com",
+			iswild:       true,
+			expectedhash: "authority.example; accounturi=https://ca.example/account-hash/sha-256/5SQm7n6tPh2-PlLbCKGnViTXX5z19SCN4cPGQHSk-kw; policy = wildcard",
+		},
+	}
+
+	for _, currentTest := range tests {
+		e := EncodeDNSPersist01AccountHash(issuerdomain, hashprefix, currentTest.Account, currentTest.domain, currentTest.iswild)
+		if e != currentTest.expectedhash {
+			t.Fatalf("expected: %s, got: %s", currentTest.expectedhash, e)
+		}
+	}
+}
+
 func TestClient_UpdateChallenge(t *testing.T) {
 	account, order := makeOrder(t)
 	auth, err := testClient.FetchAuthorization(account, order.Authorizations[0])
